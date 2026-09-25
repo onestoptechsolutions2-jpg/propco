@@ -1,13 +1,21 @@
 # ---- deps ----
 FROM node:22-slim AS deps
 WORKDIR /app
+# Prisma's `postinstall` (triggered by `pnpm install`) needs libssl to detect
+# the right engine, and needs prisma/schema.prisma to exist — both must be
+# in place *before* the install step runs, not just before `prisma generate`.
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl \
+    && rm -rf /var/lib/apt/lists/*
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY prisma ./prisma
 RUN pnpm install --frozen-lockfile
 
 # ---- builder ----
 FROM node:22-slim AS builder
 WORKDIR /app
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl \
+    && rm -rf /var/lib/apt/lists/*
 RUN corepack enable
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -18,6 +26,11 @@ RUN pnpm build
 FROM node:22-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+# The query engine binary also needs libssl present at *runtime*, not just
+# at generate-time — omitting this here is a common cause of the container
+# crashing on its first Prisma query even though the build succeeded.
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl \
+    && rm -rf /var/lib/apt/lists/*
 RUN groupadd -r nodejs && useradd -r -g nodejs nextjs
 
 COPY --from=builder /app/public ./public
