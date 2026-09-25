@@ -1,0 +1,197 @@
+// PropCo — Phase 1 schema
+// Covers: auth (NextAuth), roles, Owner, Property, Unit, Tenant, Lease.
+// Later phases (Payment, Payout, Supplier, Invoice, Payroll, Document, Report)
+// slot in as additional models without touching these.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Auth (NextAuth / Auth.js) ----------
+
+enum Role {
+  ADMIN
+  STAFF
+  OWNER
+  LANDLORD // self-managing landlord: staff-level access, scoped to own properties
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String? // set for credentials-based accounts; null for OAuth-only users
+  role          Role      @default(STAFF)
+
+  // If this user is an Owner or Landlord, link them to their Owner record.
+  ownerProfile Owner? @relation(fields: [ownerId], references: [id])
+  ownerId      String? @unique
+
+  accounts Account[]
+  sessions Session[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------- Core domain ----------
+
+enum ManagementMode {
+  AGENCY_MANAGED
+  SELF_MANAGED
+}
+
+enum PropertyType {
+  SINGLE_UNIT
+  BUILDING
+}
+
+enum PropertyStatus {
+  ACTIVE
+  MAINTENANCE
+  INACTIVE
+}
+
+model Owner {
+  id            String   @id @default(cuid())
+  name          String
+  email         String?  @unique
+  phone         String?
+  payoutMethod  String? // "mpesa" | "bank" | "card" — free text for now, structured later
+  bankDetails   String? // JSON-ish free text for v1; formalize in a later phase
+  mpesaNumber   String?
+  isSelfManaging Boolean @default(false)
+
+  user       User?
+  properties Property[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Property {
+  id              String         @id @default(cuid())
+  name            String
+  addressLine1    String
+  addressLine2    String?
+  city            String?
+  type            PropertyType   @default(SINGLE_UNIT)
+  status          PropertyStatus @default(ACTIVE)
+  managementMode  ManagementMode @default(AGENCY_MANAGED)
+  platformFeeKes  Decimal?       @db.Decimal(10, 2) // used only when SELF_MANAGED
+
+  owner   Owner  @relation(fields: [ownerId], references: [id])
+  ownerId String
+
+  units Unit[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+}
+
+enum UnitStatus {
+  VACANT
+  OCCUPIED
+  MAINTENANCE
+}
+
+model Unit {
+  id           String     @id @default(cuid())
+  label        String // e.g. "Unit 3B", or "Main House" for a single-unit property
+  bedrooms     Int?
+  bathrooms    Int?
+  rentAmount   Decimal    @db.Decimal(10, 2)
+  status       UnitStatus @default(VACANT)
+
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  propertyId String
+
+  leases Lease[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([propertyId])
+}
+
+model Tenant {
+  id    String  @id @default(cuid())
+  name  String
+  email String?
+  phone String?
+
+  leases Lease[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum LeaseStatus {
+  ACTIVE
+  ENDED
+  TERMINATED
+}
+
+model Lease {
+  id          String      @id @default(cuid())
+  startDate   DateTime
+  endDate     DateTime?
+  rentAmount  Decimal     @db.Decimal(10, 2)
+  depositAmount Decimal?  @db.Decimal(10, 2)
+  status      LeaseStatus @default(ACTIVE)
+
+  unit     Unit   @relation(fields: [unitId], references: [id])
+  unitId   String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+  tenantId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([unitId])
+  @@index([tenantId])
+}

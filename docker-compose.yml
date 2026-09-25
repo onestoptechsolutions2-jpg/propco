@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: propco
+      POSTGRES_PASSWORD: propco
+      POSTGRES_DB: propco
+    volumes:
+      - propco_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U propco"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://propco:propco@db:5432/propco?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "3000"
+
+  # Runs the same image but idles as a placeholder for Phase 2+ background
+  # jobs (rent reminders, M-Pesa/payment webhooks, payroll runs). Point its
+  # entrypoint at a worker script once that code exists; for now it just
+  # keeps the container defined so the compose topology doesn't change later.
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://propco:propco@db:5432/propco?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["node", "-e", "console.log('worker placeholder — no jobs defined yet'); setInterval(() => {}, 1 << 30)"]
+    profiles: ["with-worker"]
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+
+volumes:
+  propco_db_data:
