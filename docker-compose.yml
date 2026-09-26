@@ -25,8 +25,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    expose:
-      - "3000"
+    ports:
+      - "3000:3010"
 
   # Runs the same image but idles as a placeholder for Phase 2+ background
   # jobs (rent reminders, M-Pesa/payment webhooks, payroll runs). Point its
