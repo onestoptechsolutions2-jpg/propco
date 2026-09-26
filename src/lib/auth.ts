@@ -11,6 +11,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   // Credentials provider requires JWT sessions; the adapter still links
   // Google accounts to Users and stores them in the DB as normal.
   session: { strategy: "jwt" },
+  // Required behind any reverse proxy (Coolify's Traefik, Nginx, etc.) —
+  // without this, Auth.js rejects incoming requests with
+  // "UntrustedHost: Host must be trusted" because the Host header it sees
+  // doesn't match what it expects from a direct connection. Safe here
+  // specifically because the proxy in front of this app is trusted
+  // infrastructure, not arbitrary user input.
+  trustHost: true,
   pages: {
     signIn: "/login",
   },
