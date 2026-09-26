@@ -36,11 +36,23 @@ Fill in:
 docker compose up --build
 ```
 
-This starts Postgres, the Next.js app (as a standalone server, not Vercel's
-runtime), and Nginx in front of it on port 80. The `worker` service is
-defined but idle until Phase 2 background jobs (rent reminders, payment
-webhooks, payroll runs) are built — start it with
-`docker compose --profile with-worker up`.
+This starts Postgres and the Next.js app (as a standalone server, not
+Vercel's runtime). The `worker` service is defined but idle until Phase 2
+background jobs (rent reminders, payment webhooks, payroll runs) are built
+— start it with `docker compose --profile with-worker up`.
+
+**On Coolify:** don't add a reverse proxy service to this compose file —
+Coolify already runs its own (Traefik) with automatic TLS for whatever
+domain you assign in its UI, and it auto-detects the `app` service's
+`expose: 3000`. An earlier version of this file included an `nginx`
+service, which conflicted with that and failed to deploy (`nginx.conf`
+bind-mount error) — it's been removed.
+
+**Self-hosting without Coolify** (plain `docker compose` on your own VPS):
+you'll want a reverse proxy in front of `app` for TLS. A reference
+`nginx.conf` is included in this repo; add an `nginx` service back to
+`docker-compose.yml` pointing at it if you go this route, or use your own
+Caddy/Traefik setup.
 
 Once containers are up, run migrations and seed data against the running
 `db` container:
