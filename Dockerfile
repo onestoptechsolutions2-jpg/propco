@@ -42,7 +42,15 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# Under pnpm, Prisma's generated client and query-engine binaries live
+# inside pnpm's virtual store (node_modules/.pnpm/@prisma+client@.../...),
+# not in a top-level node_modules/.prisma folder the way npm/yarn hoisting
+# would produce. Next's standalone tracing also doesn't reliably capture
+# Prisma's dynamically-loaded engine binaries. Rather than hardcode a pnpm
+# internal path that can shift with a lockfile update, overlay the full
+# real node_modules from the builder stage on top of standalone's pruned
+# copy — larger image, but doesn't depend on guessing pnpm's layout.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 USER nextjs
 EXPOSE 3000
