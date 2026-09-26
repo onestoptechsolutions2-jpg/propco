@@ -9,9 +9,10 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends openssl \
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY prisma ./prisma
-# Belt-and-suspenders: set this directly as a build ENV rather than relying
-# solely on .npmrc, so the build can't fail with ERR_PNPM_IGNORED_BUILDS
-# even if that file is ever missing, stale, or excluded from the repo.
+# The real fix for ERR_PNPM_IGNORED_BUILDS lives in pnpm-workspace.yaml
+# (dangerouslyAllowAllBuilds / allowBuilds — pnpm 11+ moved these out of
+# .npmrc). This env var is kept as a harmless extra layer but is not load-
+# bearing; do not rely on it alone.
 ENV npm_config_dangerously_allow_all_builds=true
 RUN pnpm install --frozen-lockfile
 

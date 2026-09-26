@@ -1,6 +1,12 @@
-onlyBuiltDependencies:
-  - "@prisma/client"
-  - "@prisma/engines"
-  - prisma
-  - esbuild
-  - unrs-resolver
+# pnpm 11+ moved dependency build-script approval here (pnpm-workspace.yaml)
+# rather than .npmrc — see https://pnpm.io/settings/build. The old
+# `onlyBuiltDependencies` list (pnpm v10 schema) is an eligibility list only
+# and does NOT by itself grant permission under v11+'s strictDepBuilds
+# default, so it silently stopped being sufficient on its own.
+dangerouslyAllowAllBuilds: true
+allowBuilds:
+  "@prisma/client": true
+  "@prisma/engines": true
+  prisma: true
+  esbuild: true
+  unrs-resolver: true
