@@ -22,7 +22,11 @@ cp .env.example .env
 ```
 
 Fill in:
-- `AUTH_SECRET` — generate with `openssl rand -base64 32`
+- `AUTH_SECRET` — optional when running via the provided Docker setup; the
+  container generates and persists one automatically on first boot if you
+  leave it unset (see `docker-entrypoint.sh`). Set it explicitly if you
+  want to control it yourself, or if you're running `pnpm dev` locally
+  without Docker (generate with `openssl rand -base64 32`).
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — from the
   Google Cloud Console (console.cloud.google.com/apis/credentials).
   Set the authorized redirect URI to `<your-app-url>/api/auth/callback/google`

@@ -42,6 +42,16 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
+
+# Writable directory for the auto-generated AUTH_SECRET (see
+# docker-entrypoint.sh). Created and chowned here, before USER switches
+# to nextjs, so that when docker-compose mounts an empty named volume
+# over this path, Docker copies this directory's ownership into the new
+# volume on first use.
+RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
+COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
+
 # Under pnpm, Prisma's generated client and query-engine binaries live
 # inside pnpm's virtual store (node_modules/.pnpm/@prisma+client@.../...),
 # not in a top-level node_modules/.prisma folder the way npm/yarn hoisting
@@ -55,4 +65,5 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
+ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["node", "server.js"]

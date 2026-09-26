@@ -27,6 +27,8 @@ services:
         condition: service_healthy
     ports:
       - "3010:3000"
+    volumes:
+      - propco_app_data:/app/data
 
   # Runs the same image but idles as a placeholder for Phase 2+ background
   # jobs (rent reminders, M-Pesa/payment webhooks, payroll runs). Point its
@@ -45,6 +47,11 @@ services:
         condition: service_healthy
     command: ["node", "-e", "console.log('worker placeholder — no jobs defined yet'); setInterval(() => {}, 1 << 30)"]
     profiles: ["with-worker"]
+    volumes:
+      # Shares the same AUTH_SECRET as `app` (see docker-entrypoint.sh) in
+      # case the worker ever needs to verify signed sessions/JWTs itself.
+      - propco_app_data:/app/data
 
 volumes:
   propco_db_data:
+  propco_app_data:
