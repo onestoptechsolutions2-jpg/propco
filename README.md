@@ -43,10 +43,12 @@ background jobs (rent reminders, payment webhooks, payroll runs) are built
 
 **On Coolify:** don't add a reverse proxy service to this compose file —
 Coolify already runs its own (Traefik) with automatic TLS for whatever
-domain you assign in its UI, and it auto-detects the `app` service's
-`expose: 3000`. An earlier version of this file included an `nginx`
-service, which conflicted with that and failed to deploy (`nginx.conf`
-bind-mount error) — it's been removed.
+domain you assign in its UI, and it routes to the `app` service on its
+published port (`3010` on the host, mapping to `3000` in the container).
+An earlier version of this file included an `nginx` service, which
+conflicted with that and failed to deploy (`nginx.conf` bind-mount
+error) — it's been removed. Adjust the host-side `3010` in
+`docker-compose.yml` if that port is already taken on your server.
 
 **Self-hosting without Coolify** (plain `docker compose` on your own VPS):
 you'll want a reverse proxy in front of `app` for TLS. A reference
@@ -62,7 +64,7 @@ docker compose exec app npx prisma migrate deploy
 docker compose exec app npx tsx prisma/seed.ts
 ```
 
-Visit `http://localhost` and sign in with the seeded admin account:
+Visit `http://localhost:3010` and sign in with the seeded admin account:
 **admin@propco.local / changeme123** — change this password immediately
 in a real deployment (the seed script is for local/dev use only).
 
