@@ -29,23 +29,32 @@ async function main() {
     },
   });
 
-  const property = await prisma.property.create({
-    data: {
-      name: "Nyali Court Apartments",
-      addressLine1: "Links Road",
-      city: "Mombasa",
-      type: "BUILDING",
-      managementMode: "AGENCY_MANAGED",
-      ownerId: owner.id,
-      units: {
-        create: [
-          { label: "Unit 1A", bedrooms: 2, bathrooms: 1, rentAmount: 35000, status: "OCCUPIED" },
-          { label: "Unit 1B", bedrooms: 1, bathrooms: 1, rentAmount: 25000, status: "VACANT" },
-          { label: "Unit 2A", bedrooms: 3, bathrooms: 2, rentAmount: 55000, status: "MAINTENANCE" },
-        ],
-      },
-    },
+  // Sample property/unit data is only created once — this script runs on
+  // every deploy (see docker-entrypoint.sh), so guard against creating a
+  // duplicate "Nyali Court Apartments" on every restart.
+  const existingSample = await prisma.property.findFirst({
+    where: { name: "Nyali Court Apartments", ownerId: owner.id },
   });
+
+  const property =
+    existingSample ??
+    (await prisma.property.create({
+      data: {
+        name: "Nyali Court Apartments",
+        addressLine1: "Links Road",
+        city: "Mombasa",
+        type: "BUILDING",
+        managementMode: "AGENCY_MANAGED",
+        ownerId: owner.id,
+        units: {
+          create: [
+            { label: "Unit 1A", bedrooms: 2, bathrooms: 1, rentAmount: 35000, status: "OCCUPIED" },
+            { label: "Unit 1B", bedrooms: 1, bathrooms: 1, rentAmount: 25000, status: "VACANT" },
+            { label: "Unit 2A", bedrooms: 3, bathrooms: 2, rentAmount: 55000, status: "MAINTENANCE" },
+          ],
+        },
+      },
+    }));
 
   console.log({ admin: admin.email, owner: owner.name, property: property.name });
   console.log("Admin login: admin@propco.local / changeme123");

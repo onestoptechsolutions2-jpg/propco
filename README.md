@@ -60,13 +60,12 @@ you'll want a reverse proxy in front of `app` for TLS. A reference
 `docker-compose.yml` pointing at it if you go this route, or use your own
 Caddy/Traefik setup.
 
-Once containers are up, run migrations and seed data against the running
-`db` container:
-
-```bash
-docker compose exec app npx prisma migrate deploy
-docker compose exec app npx tsx prisma/seed.ts
-```
+Migrations and seeding now run automatically — every time the `app`
+container boots, `docker-entrypoint.sh` runs `prisma migrate deploy`
+(applies any migrations not already recorded as run — safe to repeat) and
+then `prisma/seed.ts` (upserts the admin/owner, and skips the sample
+property if it already exists — also safe to repeat). Nothing to run by
+hand.
 
 Visit `http://localhost:3010` and sign in with the seeded admin account:
 **admin@propco.local / changeme123** — change this password immediately

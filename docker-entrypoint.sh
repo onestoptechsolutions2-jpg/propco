@@ -23,4 +23,18 @@ if [ -z "$AUTH_SECRET" ]; then
   export AUTH_SECRET
 fi
 
+# Apply pending migrations and seed on every boot of the main app process
+# (identified by the default CMD, "node server.js" — the worker service
+# overrides the command entirely and skips this). `prisma migrate deploy`
+# only applies migrations not already recorded as run, so this is safe to
+# repeat on every deploy/restart. `seed.ts` is written to be idempotent
+# (upserts, and skips sample data it already created) for the same reason.
+if [ "$1" = "node" ] && [ "$2" = "server.js" ]; then
+  echo "Applying database migrations..."
+  npx prisma migrate deploy
+
+  echo "Seeding database..."
+  npx tsx prisma/seed.ts
+fi
+
 exec "$@"
