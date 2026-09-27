@@ -72,7 +72,8 @@ export default async function PropertyDetailPage({
 
       <h2 className="mt-10 font-serif text-lg text-ink">Units</h2>
       <div className="mt-4 overflow-hidden rounded-lg border border-border bg-surface">
-        <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] text-left text-sm">
           <thead className="bg-background text-xs uppercase tracking-wide text-muted">
             <tr>
               <th className="px-4 py-3">Unit</th>
@@ -121,6 +122,7 @@ export default async function PropertyDetailPage({
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

@@ -69,6 +69,12 @@ export default async function DashboardPage() {
                 </Link>{" "}
                 — a single unit or a whole building.
               </li>
+              <li>
+                <Link href="/rent" className="text-accent hover:underline">
+                  Check the rent roll
+                </Link>{" "}
+                and record this month&apos;s payments.
+              </li>
             </>
           )}
           {user.role === "LANDLORD" && (

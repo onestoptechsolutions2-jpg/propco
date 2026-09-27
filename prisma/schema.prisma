@@ -189,9 +189,50 @@ model Lease {
   tenant   Tenant @relation(fields: [tenantId], references: [id])
   tenantId String
 
+  payments Payment[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([unitId])
   @@index([tenantId])
+}
+
+// ---------- Rent collection (Phase 2) ----------
+
+enum PaymentMethod {
+  MPESA
+  BANK
+  CASH
+  CARD
+}
+
+enum PaymentStatus {
+  PENDING // expected but not yet received
+  PAID
+  LATE // past due date, still unpaid
+  FAILED // e.g. a failed M-Pesa STK push attempt
+}
+
+model Payment {
+  id       String        @id @default(cuid())
+  amount   Decimal       @db.Decimal(10, 2)
+  dueDate  DateTime
+  paidDate DateTime?
+  method   PaymentMethod @default(MPESA)
+  status   PaymentStatus @default(PENDING)
+
+  // M-Pesa/bank reference number, once wired up to the real Daraja API
+  // (STK Push) in a later pass — see README "What's next".
+  reference String?
+  notes     String?
+
+  lease   Lease  @relation(fields: [leaseId], references: [id])
+  leaseId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leaseId])
+  @@index([dueDate])
 }

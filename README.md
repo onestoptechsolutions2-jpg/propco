@@ -1,11 +1,22 @@
-# PropCo — Property Management Platform (Phase 1)
+# PropCo — Property Management Platform
 
-Phase 1 of the full spec: authentication (Google OAuth + email/password), roles
+**Phase 1** (done): authentication (Google OAuth + email/password), roles
 (Admin / Staff / Owner / Self-Managing Landlord), and full CRUD for
 Properties, Units, Owners and Tenants, including a basic lease-assignment
-flow. Later phases (rent collection, payouts, maintenance/suppliers,
-invoicing, payroll, documents, reporting, analytics) build on this
-foundation without changing what's here.
+flow.
+
+**Phase 2** (in progress): manual rent collection — a rent roll (`/rent`)
+showing every active lease's payment status for the current month, a
+per-lease payment history, and a form to record payments (M-Pesa, bank,
+cash, or card) with a reference number. **Not yet wired up:** live M-Pesa
+STK Push — recording an M-Pesa payment today is a manual entry (e.g. after
+checking your phone/statement), not an automatic charge. Building that
+requires your actual Safaricom Daraja API credentials (sandbox or
+production) — see "What's next" below.
+
+Later phases (owner payouts, maintenance/suppliers, invoicing, payroll,
+documents, reporting, analytics) build on this foundation without changing
+what's here.
 
 ## Stack
 
@@ -100,10 +111,22 @@ the platform spec doc).
 
 ## What's next
 
-See `property-management-platform-spec.md` (the original planning doc) for
-the full module list and build-phase order: rent collection (M-Pesa/bank/
-card), owner payouts, supplier & maintenance management, invoicing,
-payroll, documents & contracts, reporting, and analytics.
+- **Live M-Pesa STK Push**: needs your Safaricom Daraja API consumer
+  key/secret and shortcode (sandbox or production). Once you have those,
+  the natural next step is a `/api/mpesa/stk-push` route that initiates a
+  push to the tenant's phone, plus a webhook route
+  (`/api/mpesa/callback`) that Safaricom calls back with the result —
+  which would then create/update a `Payment` row automatically instead of
+  a staff member entering it by hand.
+- **Automatic late detection**: a scheduled job (the `worker` service is
+  already scaffolded for this) that creates a `PENDING` `Payment` row for
+  every active lease at the start of each month, and flips it to `LATE`
+  if it's still unpaid past the due date — right now payments are only
+  created when someone manually records one.
+- After that: owner payouts, supplier & maintenance management, invoicing,
+  payroll, documents & contracts, reporting, and analytics — see
+  `property-management-platform-spec.md` for the full module list and
+  build-phase order.
 
 ## Known limitation in this sandbox
 
