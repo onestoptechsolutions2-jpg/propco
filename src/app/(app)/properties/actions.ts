@@ -14,6 +14,9 @@ const propertySchema = z.object({
   type: z.enum(["SINGLE_UNIT", "BUILDING"]),
   managementMode: z.enum(["AGENCY_MANAGED", "SELF_MANAGED"]),
   ownerId: z.string().min(1, "Owner is required"),
+  // Agency's cut of collected rent (percent). Only used for AGENCY_MANAGED
+  // properties when generating owner payouts; ignored otherwise.
+  commissionPct: z.coerce.number().min(0).max(100).default(10),
 });
 
 export async function createProperty(formData: FormData) {
@@ -27,6 +30,7 @@ export async function createProperty(formData: FormData) {
     type: formData.get("type"),
     managementMode: formData.get("managementMode"),
     ownerId: formData.get("ownerId"),
+    commissionPct: formData.get("commissionPct") || undefined,
   });
 
   if (!canManageOwnerRecords(user, parsed.ownerId)) {
@@ -68,6 +72,7 @@ export async function updateProperty(propertyId: string, formData: FormData) {
     type: formData.get("type"),
     managementMode: formData.get("managementMode"),
     ownerId: formData.get("ownerId"),
+    commissionPct: formData.get("commissionPct") || undefined,
   });
 
   if (!canManageOwnerRecords(user, parsed.ownerId)) {

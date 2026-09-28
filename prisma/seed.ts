@@ -56,6 +56,43 @@ async function main() {
       },
     }));
 
+  // Sample tenant + lease + one paid month of rent, so /rent and /payouts
+  // have data to show right after the first deploy. Created only on the
+  // very first boot (keyed on the sample tenant's email) — the seed re-runs
+  // on every deploy and must not keep inventing rent payments.
+  const existingTenant = await prisma.tenant.findFirst({ where: { email: "tenant@propco.local" } });
+  if (!existingTenant) {
+    const unit = await prisma.unit.findFirst({
+      where: { propertyId: property.id, label: "Unit 1A" },
+    });
+    if (unit) {
+      const now = new Date();
+      const tenant = await prisma.tenant.create({
+        data: { name: "Sample Tenant", email: "tenant@propco.local", phone: "+254711000000" },
+      });
+      const lease = await prisma.lease.create({
+        data: {
+          unitId: unit.id,
+          tenantId: tenant.id,
+          startDate: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)),
+          rentAmount: 35000,
+          depositAmount: 35000,
+        },
+      });
+      await prisma.payment.create({
+        data: {
+          leaseId: lease.id,
+          amount: 35000,
+          dueDate: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 5)),
+          paidDate: now,
+          method: "MPESA",
+          status: "PAID",
+          reference: "SAMPLE-MPESA-001",
+        },
+      });
+    }
+  }
+
   console.log({ admin: admin.email, owner: owner.name, property: property.name });
   console.log("Admin login: admin@propco.local / changeme123");
 }

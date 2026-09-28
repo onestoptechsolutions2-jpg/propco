@@ -5,7 +5,7 @@
 Properties, Units, Owners and Tenants, including a basic lease-assignment
 flow.
 
-**Phase 2** (in progress): manual rent collection — a rent roll (`/rent`)
+**Phase 2** (done, except live M-Pesa): manual rent collection — a rent roll (`/rent`)
 showing every active lease's payment status for the current month, a
 per-lease payment history, and a form to record payments (M-Pesa, bank,
 cash, or card) with a reference number. **Not yet wired up:** live M-Pesa
@@ -14,17 +14,30 @@ checking your phone/statement), not an automatic charge. Building that
 requires your actual Safaricom Daraja API credentials (sandbox or
 production) — see "What's next" below.
 
-Later phases (owner payouts, maintenance/suppliers, invoicing, payroll,
+**Phase 3** (done): owner payouts (`/payouts`). Pick a month and generate one
+payout per owner from that month's rent marked *Paid* on their
+agency-managed properties, less the per-property commission % (set on each
+property's form, default 10%). Regenerating recalculates anything still
+pending and never touches a payout already marked paid. Owners see a
+read-only view of their own payouts.
+
+**Background worker** (`scripts/worker.ts`, the `worker` service): every day
+at 00:05 (and once on boot) it creates a Pending rent row for each active
+lease that has none this month, and flips overdue Pending rows to Late.
+
+Later phases (maintenance/suppliers, invoicing, payroll,
 documents, reporting, analytics) build on this foundation without changing
 what's here.
+
 
 ## Stack
 
 - Next.js 16 (App Router, TypeScript), Tailwind CSS v4
 - Auth.js (NextAuth v5) — Google OAuth + credentials, JWT sessions
 - Prisma + PostgreSQL
-- Containerized: Docker Compose with `app`, `db` (Postgres), `worker`
-  (placeholder for Phase 2+ background jobs), and `nginx` as reverse proxy
+- Containerized: Docker Compose with `app`, `db` (Postgres), and `worker`
+  (runs `scripts/worker.ts` — daily rent generation/late-flagging, more
+  scheduled jobs land here in later phases)
 
 ## 1. Configure environment
 
@@ -51,10 +64,10 @@ Fill in:
 docker compose up --build
 ```
 
-This starts Postgres and the Next.js app (as a standalone server, not
-Vercel's runtime). The `worker` service is defined but idle until Phase 2
-background jobs (rent reminders, payment webhooks, payroll runs) are built
-— start it with `docker compose --profile with-worker up`.
+This starts Postgres, the Next.js app (as a standalone server, not
+Vercel's runtime), and the `worker` — which runs `scripts/worker.ts` to
+generate each month's rent rows and flag late ones daily. All three start
+by default with a plain `docker compose up`.
 
 **On Coolify:** don't add a reverse proxy service to this compose file —
 Coolify already runs its own (Traefik) with automatic TLS for whatever
@@ -118,13 +131,7 @@ the platform spec doc).
   (`/api/mpesa/callback`) that Safaricom calls back with the result —
   which would then create/update a `Payment` row automatically instead of
   a staff member entering it by hand.
-- **Automatic late detection**: a scheduled job (the `worker` service is
-  already scaffolded for this) that creates a `PENDING` `Payment` row for
-  every active lease at the start of each month, and flips it to `LATE`
-  if it's still unpaid past the due date — right now payments are only
-  created when someone manually records one.
-- After that: owner payouts, supplier & maintenance management, invoicing,
-  payroll, documents & contracts, reporting, and analytics — see
+- After that: supplier & maintenance management, invoicing, payroll, documents & contracts, reporting, and analytics — see
   `property-management-platform-spec.md` for the full module list and
   build-phase order.
 

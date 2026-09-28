@@ -1,13 +1,17 @@
 import { requireUser } from "@/lib/access";
 import { signOut } from "@/lib/auth";
 import { AppNav } from "@/components/AppNav";
+import type { Role } from "@prisma/client";
 
-const NAV = [
+// Which roles see each nav item. Omit `roles` for "everyone signed in".
+const NAV: { href: string; label: string; roles?: Role[] }[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/properties", label: "Properties" },
-  { href: "/rent", label: "Rent", staffOnly: true },
-  { href: "/owners", label: "Owners", staffOnly: true },
-  { href: "/tenants", label: "Tenants", staffOnly: true },
+  { href: "/rent", label: "Rent", roles: ["ADMIN", "STAFF", "LANDLORD"] },
+  // Landlords collect their own rent, so agency payouts don't apply to them.
+  { href: "/payouts", label: "Payouts", roles: ["ADMIN", "STAFF", "OWNER"] },
+  { href: "/owners", label: "Owners", roles: ["ADMIN", "STAFF"] },
+  { href: "/tenants", label: "Tenants", roles: ["ADMIN", "STAFF", "LANDLORD"] },
 ];
 
 export default async function AppLayout({
@@ -16,9 +20,10 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const user = await requireUser();
-  const isStaffLike = user.role === "ADMIN" || user.role === "STAFF" || user.role === "LANDLORD";
 
-  const items = NAV.filter((item) => !item.staffOnly || isStaffLike);
+  const items = NAV.filter((item) => !item.roles || item.roles.includes(user.role)).map(
+    ({ href, label }) => ({ href, label })
+  );
 
   async function doSignOut() {
     "use server";
@@ -33,7 +38,7 @@ export default async function AppLayout({
         roleLabel={user.role.toLowerCase()}
         signOutAction={doSignOut}
       />
-      <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 md:px-10 md:py-10">{children}</main>
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8 md:px-10 md:py-10">{children}</main>
     </div>
   );
 }

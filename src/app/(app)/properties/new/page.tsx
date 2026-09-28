@@ -47,6 +47,26 @@ export default async function NewPropertyPage() {
           </select>
         </div>
 
+        {user.role !== "LANDLORD" && (
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">
+              Agency commission (% of collected rent)
+            </label>
+            <input
+              name="commissionPct"
+              type="number"
+              min={0}
+              max={100}
+              step="0.01"
+              defaultValue={10}
+              className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink"
+            />
+            <p className="mt-1 text-xs text-muted">
+              Deducted when generating this owner&apos;s monthly payout. Ignored for self-managed properties.
+            </p>
+          </div>
+        )}
+
         <div>
           <label className="mb-1 block text-xs font-medium text-muted">Owner</label>
           <select
