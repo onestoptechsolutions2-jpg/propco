@@ -21,5 +21,7 @@ export default auth((req) => {
 
 export const config = {
   // Run on everything except static assets and Next internals.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|offline.html|icon.svg|icon-maskable.svg).*)",
+  ],
 };

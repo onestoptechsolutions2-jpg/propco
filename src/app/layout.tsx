@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 
@@ -15,6 +15,13 @@ const sourceSerif = Source_Serif_4({
 export const metadata: Metadata = {
   title: "PropCo — Property Management",
   description: "Manage properties, owners, tenants and leases end to end.",
+  applicationName: "PropCo",
+  appleWebApp: { capable: true, title: "PropCo", statusBarStyle: "default" },
+  icons: { icon: "/icon.svg", apple: "/icon.svg" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#16302b",
 };
 
 export default function RootLayout({

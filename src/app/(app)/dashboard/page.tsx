@@ -52,52 +52,19 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <div className="mt-10 rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-serif text-lg text-ink">Get started</h2>
-        <ul className="mt-3 flex flex-col gap-2 text-sm text-foreground">
-          {(user.role === "ADMIN" || user.role === "STAFF") && (
-            <>
-              <li>
-                <Link href="/owners/new" className="text-accent hover:underline">
-                  Add an owner
-                </Link>{" "}
-                — every property needs one on file first.
-              </li>
-              <li>
-                <Link href="/properties/new" className="text-accent hover:underline">
-                  Add a property
-                </Link>{" "}
-                — a single unit or a whole building.
-              </li>
-              <li>
-                <Link href="/rent" className="text-accent hover:underline">
-                  Check the rent roll
-                </Link>{" "}
-                and record this month&apos;s payments.
-              </li>
-              <li>
-                <Link href="/maintenance" className="text-accent hover:underline">
-                  Log a maintenance request
-                </Link>{" "}
-                or check on open jobs.
-              </li>
-            </>
-          )}
-          {user.role === "LANDLORD" && (
-            <li>
-              <Link href="/properties/new" className="text-accent hover:underline">
-                Add a property
-              </Link>{" "}
-              to your own portfolio.
-            </li>
-          )}
-          <li>
-            <Link href="/properties" className="text-accent hover:underline">
-              View all properties
-            </Link>{" "}
-            and their units.
-          </li>
-        </ul>
+      <div className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border bg-accent-light p-6">
+        <div>
+          <h2 className="font-serif text-lg text-ink">New here, or not sure what to do next?</h2>
+          <p className="mt-1 text-sm text-foreground">
+            Our step-by-step guides walk you through setting up, collecting rent, paying owners and handling repairs.
+          </p>
+        </div>
+        <Link
+          href="/guide"
+          className="rounded bg-ink px-5 py-2.5 text-sm font-medium text-white transition hover:bg-ink-light"
+        >
+          Open the guides
+        </Link>
       </div>
     </div>
   );

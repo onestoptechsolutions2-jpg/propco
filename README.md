@@ -43,6 +43,16 @@ delivered by the worker every minute via each recipient's preferred channel
 (see `.env.example`); WhatsApp isn't wired up. With no keys, messages show as
 *Skipped* on `/notifications`.
 
+**Usability pass:** the app is an installable PWA (manifest, service worker,
+"Install app" banner; Android/desktop Chrome and iOS "Add to Home Screen"),
+with 90-day sessions so it stays signed in. The menu is grouped in plain
+language (Money in / Money out / Repairs / Messages). `/guide` has
+step-by-step wizards per role, with steps ticked automatically from real
+data. WhatsApp messages are sent from the staff member's own device: they
+appear under `/notifications` with a "Send on WhatsApp" button (wa.me link),
+and the menu shows a count of those waiting. Icons are SVG; add PNG icons
+if you need older-iOS home-screen icons.
+
 Later phases (invoicing, payroll,
 documents, reporting, analytics) build on this foundation without changing
 what's here.

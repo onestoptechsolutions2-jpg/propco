@@ -10,7 +10,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
   // Credentials provider requires JWT sessions; the adapter still links
   // Google accounts to Users and stores them in the DB as normal.
-  session: { strategy: "jwt" },
+  // 90-day rolling session so an installed app stays signed in.
+  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 90, updateAge: 60 * 60 * 24 },
   // Required behind any reverse proxy (Coolify's Traefik, Nginx, etc.) —
   // without this, Auth.js rejects incoming requests with
   // "UntrustedHost: Host must be trusted" because the Host header it sees

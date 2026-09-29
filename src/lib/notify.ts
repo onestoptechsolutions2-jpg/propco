@@ -6,7 +6,8 @@
  * configured via env vars. Providers are plain HTTP calls (no extra deps):
  *   EMAIL    -> Resend      (RESEND_API_KEY, NOTIFY_EMAIL_FROM)
  *   SMS      -> Africa's Talking (AT_USERNAME, AT_API_KEY, optional AT_SENDER_ID)
- *   WHATSAPP -> not wired up yet; rows are marked SKIPPED
+ *   WHATSAPP -> sent from a person's own device: rows stay QUEUED and staff tap
+ *               "Send on WhatsApp" on /notifications (wa.me link, see whatsapp.ts)
  * With no provider configured, rows are marked SKIPPED so the log still shows
  * what would have been sent.
  *
@@ -92,7 +93,7 @@ async function send(channel: NotifyChannel, to: string, subject: string, body: s
 /** Deliver up to `limit` QUEUED notifications. Returns counts. */
 export async function dispatchQueued(db: Pick<PrismaClient, "notification">, limit = 100) {
   const rows = await db.notification.findMany({
-    where: { status: "QUEUED" },
+    where: { status: "QUEUED", channel: { not: "WHATSAPP" } },
     orderBy: { createdAt: "asc" },
     take: limit,
   });

@@ -1,5 +1,8 @@
 import { requireRole } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
+import { whatsappLink } from "@/lib/whatsapp";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { markNotificationSent } from "./actions";
 
 const badge: Record<string, string> = {
   SENT: "bg-accent-light text-accent",
@@ -11,14 +14,46 @@ const badge: Record<string, string> = {
 export default async function NotificationsPage() {
   await requireRole("STAFF");
   const rows = await prisma.notification.findMany({ orderBy: { createdAt: "desc" }, take: 200 });
+  const toSend = rows.filter((n) => n.channel === "WHATSAPP" && n.status === "QUEUED");
 
   return (
     <div>
       <h1 className="font-serif text-3xl text-ink">Notifications</h1>
       <p className="mt-1 text-sm text-muted">
-        Last 200 messages. Delivered every minute by the worker; rows show <strong>Skipped</strong> until an
-        email (Resend) or SMS (Africa&apos;s Talking) provider is configured in the environment.
+        Last 200 messages. Email and SMS are delivered automatically every minute once a provider is set up (otherwise
+        they show <strong>Skipped</strong>). WhatsApp messages wait for you above.
       </p>
+
+      <div className="mt-6 rounded-lg border border-border bg-surface p-5">
+        <h2 className="font-serif text-lg text-ink">
+          WhatsApp messages to send {toSend.length > 0 && `(${toSend.length})`}
+        </h2>
+        <p className="mt-1 text-xs text-muted">
+          These go out from <strong>this device&apos;s WhatsApp</strong>. Tap the button, WhatsApp opens with
+          the message ready, then press Send there.
+        </p>
+        <ul className="mt-4 flex flex-col gap-3">
+          {toSend.map((n) => {
+            const href = whatsappLink(n.recipient, `${n.subject}
+
+${n.body}`);
+            return (
+              <li key={n.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-sm">
+                <div className="min-w-0">
+                  <p className="font-medium text-foreground">{n.recipientName}</p>
+                  <p className="text-xs text-muted">{n.subject}</p>
+                </div>
+                {href ? (
+                  <WhatsAppButton href={href} markSent={markNotificationSent.bind(null, n.id)} />
+                ) : (
+                  <span className="text-xs text-muted">Phone number looks invalid — fix it on their page</span>
+                )}
+              </li>
+            );
+          })}
+          {toSend.length === 0 && <li className="text-sm text-muted">Nothing waiting. You&apos;re all caught up.</li>}
+        </ul>
+      </div>
 
       <div className="mt-6 overflow-hidden rounded-lg border border-border bg-surface">
         <div className="overflow-x-auto">
