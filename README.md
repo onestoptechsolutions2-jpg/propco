@@ -53,6 +53,15 @@ appear under `/notifications` with a "Send on WhatsApp" button (wa.me link),
 and the menu shows a count of those waiting. Icons are SVG; add PNG icons
 if you need older-iOS home-screen icons.
 
+**SaaS / multi-company:** every record belongs to an `Organization`; users only
+see their own company's data. Public landing + pricing (`/`), self-serve
+signup with a 14-day trial (`/signup`), free tier of 5 units, paid plans
+(Growth/Pro/Scale, edit prices in `src/lib/plans.ts`), `/billing` for
+customers, `/team` to add staff, and `/platform` (emails in
+`PLATFORM_ADMIN_EMAILS`) where you see all companies, MRR, and activate a plan
+after you receive their M-Pesa payment. Existing data is moved into one
+unlimited company by migration `20260107000000_multi_tenancy`.
+
 Later phases (invoicing, payroll,
 documents, reporting, analytics) build on this foundation without changing
 what's here.

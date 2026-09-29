@@ -14,13 +14,13 @@ export default async function EditPropertyPage({
   const [property, owners] = await Promise.all([
     prisma.property.findUnique({ where: { id } }),
     prisma.owner.findMany({
-      where: user.role === "LANDLORD" && user.ownerId ? { id: user.ownerId } : {},
+      where: { orgId: user.orgId, ...(user.role === "LANDLORD" && user.ownerId ? { id: user.ownerId } : {}) },
       orderBy: { name: "asc" },
     }),
   ]);
 
   if (!property) notFound();
-  if (!canManageOwnerRecords(user, property.ownerId)) notFound();
+  if (!canManageOwnerRecords(user, property.ownerId, property.orgId)) notFound();
 
   const updatePropertyWithId = updateProperty.bind(null, property.id);
   const deletePropertyWithId = deleteProperty.bind(null, property.id);

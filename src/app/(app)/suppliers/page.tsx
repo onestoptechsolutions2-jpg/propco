@@ -12,9 +12,10 @@ const TRADE_LABEL: Record<string, string> = {
 };
 
 export default async function SuppliersPage() {
-  await requireRole("STAFF", "LANDLORD");
+  const user = await requireRole("STAFF", "LANDLORD");
 
   const suppliers = await prisma.supplier.findMany({
+    where: { orgId: user.orgId },
     include: { _count: { select: { requests: true } } },
     orderBy: { name: "asc" },
   });

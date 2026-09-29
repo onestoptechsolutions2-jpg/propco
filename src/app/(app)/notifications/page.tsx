@@ -12,8 +12,8 @@ const badge: Record<string, string> = {
 };
 
 export default async function NotificationsPage() {
-  await requireRole("STAFF");
-  const rows = await prisma.notification.findMany({ orderBy: { createdAt: "desc" }, take: 200 });
+  const user = await requireRole("STAFF");
+  const rows = await prisma.notification.findMany({ where: { orgId: user.orgId }, orderBy: { createdAt: "desc" }, take: 200 });
   const toSend = rows.filter((n) => n.channel === "WHATSAPP" && n.status === "QUEUED");
 
   return (

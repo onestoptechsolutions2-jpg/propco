@@ -9,9 +9,9 @@ export default async function EditSupplierPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await requireRole("STAFF", "LANDLORD");
+  const user = await requireRole("STAFF", "LANDLORD");
 
-  const supplier = await prisma.supplier.findUnique({ where: { id } });
+  const supplier = await prisma.supplier.findFirst({ where: { id, orgId: user.orgId } });
   if (!supplier) notFound();
 
   const updateSupplierWithId = updateSupplier.bind(null, supplier.id);

@@ -4,12 +4,27 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
+  // Migration 20260107000000_multi_tenancy creates this org; upsert keeps the
+  // seed safe on databases that somehow lack it.
+  const org = await prisma.organization.upsert({
+    where: { id: "org_default" },
+    update: {},
+    create: {
+      id: "org_default",
+      name: "My Agency",
+      plan: "SCALE",
+      trialEndsAt: new Date(),
+      paidUntil: new Date(Date.now() + 100 * 365 * 86_400_000),
+    },
+  });
+
   const passwordHash = await bcrypt.hash("changeme123", 10);
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@propco.local" },
     update: {},
     create: {
+      orgId: org.id,
       email: "admin@propco.local",
       name: "Admin",
       role: "ADMIN",
@@ -18,9 +33,10 @@ async function main() {
   });
 
   const owner = await prisma.owner.upsert({
-    where: { email: "owner@propco.local" },
+    where: { orgId_email: { orgId: org.id, email: "owner@propco.local" } },
     update: {},
     create: {
+      orgId: org.id,
       name: "Sample Owner",
       email: "owner@propco.local",
       phone: "+254700000000",
@@ -40,6 +56,7 @@ async function main() {
     existingSample ??
     (await prisma.property.create({
       data: {
+        orgId: org.id,
         name: "Nyali Court Apartments",
         addressLine1: "Links Road",
         city: "Mombasa",
@@ -68,7 +85,7 @@ async function main() {
     if (unit) {
       const now = new Date();
       const tenant = await prisma.tenant.create({
-        data: { name: "Sample Tenant", email: "tenant@propco.local", phone: "+254711000000" },
+        data: { orgId: org.id, name: "Sample Tenant", email: "tenant@propco.local", phone: "+254711000000" },
       });
       const lease = await prisma.lease.create({
         data: {

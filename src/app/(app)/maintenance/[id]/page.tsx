@@ -24,13 +24,13 @@ export default async function MaintenanceRequestPage({
     where: { id },
     include: { unit: { include: { property: { include: { owner: true } } } }, supplier: true },
   });
-  if (!request) notFound();
+  if (!request || request.unit.property.orgId !== user.orgId) notFound();
 
-  const canManage = canManageOwnerRecords(user, request.unit.property.ownerId);
+  const canManage = canManageOwnerRecords(user, request.unit.property.ownerId, request.unit.property.orgId);
   if (!canManage && user.role !== "OWNER") notFound();
   if (user.role === "OWNER" && user.ownerId !== request.unit.property.ownerId) notFound();
 
-  const suppliers = canManage ? await prisma.supplier.findMany({ orderBy: { name: "asc" } }) : [];
+  const suppliers = canManage ? await prisma.supplier.findMany({ where: { orgId: user.orgId }, orderBy: { name: "asc" } }) : [];
 
   const assignSupplierForRequest = assignSupplier.bind(null, request.id);
   const completeRequestForRequest = completeRequest.bind(null, request.id);

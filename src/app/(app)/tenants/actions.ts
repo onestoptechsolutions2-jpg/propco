@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/access";
+import { requireRole, ownerScopeFilter } from "@/lib/access";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -14,7 +14,7 @@ const tenantSchema = z.object({
 });
 
 export async function createTenant(formData: FormData) {
-  await requireRole("STAFF", "LANDLORD");
+  const user = await requireRole("STAFF", "LANDLORD");
 
   const parsed = tenantSchema.parse({
     name: formData.get("name"),
@@ -24,7 +24,7 @@ export async function createTenant(formData: FormData) {
   });
 
   const tenant = await prisma.tenant.create({
-    data: { ...parsed, email: parsed.email || undefined },
+    data: { ...parsed, email: parsed.email || undefined, orgId: user.orgId },
   });
 
   revalidatePath("/tenants");
@@ -32,7 +32,7 @@ export async function createTenant(formData: FormData) {
 }
 
 export async function updateTenant(tenantId: string, formData: FormData) {
-  await requireRole("STAFF", "LANDLORD");
+  const user = await requireRole("STAFF", "LANDLORD");
 
   const parsed = tenantSchema.parse({
     name: formData.get("name"),
@@ -42,7 +42,7 @@ export async function updateTenant(tenantId: string, formData: FormData) {
   });
 
   await prisma.tenant.update({
-    where: { id: tenantId },
+    where: { id: tenantId, orgId: user.orgId },
     data: { ...parsed, email: parsed.email || undefined },
   });
 
@@ -51,8 +51,8 @@ export async function updateTenant(tenantId: string, formData: FormData) {
 }
 
 export async function deleteTenant(tenantId: string) {
-  await requireRole("STAFF", "LANDLORD");
-  await prisma.tenant.delete({ where: { id: tenantId } });
+  const user = await requireRole("STAFF", "LANDLORD");
+  await prisma.tenant.delete({ where: { id: tenantId, orgId: user.orgId } });
   revalidatePath("/tenants");
   redirect("/tenants");
 }
@@ -66,7 +66,7 @@ const leaseSchema = z.object({
 });
 
 export async function createLease(formData: FormData) {
-  await requireRole("STAFF", "LANDLORD");
+  const user = await requireRole("STAFF", "LANDLORD");
 
   const parsed = leaseSchema.parse({
     unitId: formData.get("unitId"),
@@ -75,6 +75,14 @@ export async function createLease(formData: FormData) {
     rentAmount: formData.get("rentAmount"),
     depositAmount: formData.get("depositAmount") || undefined,
   });
+
+  // Both the tenant and the unit must belong to the caller's company (and,
+  // for landlords, their own property).
+  const [tenant, unit] = await Promise.all([
+    prisma.tenant.findFirst({ where: { id: parsed.tenantId, orgId: user.orgId } }),
+    prisma.unit.findFirst({ where: { id: parsed.unitId, property: ownerScopeFilter(user) } }),
+  ]);
+  if (!tenant || !unit) throw new Error("You don't have permission to create this lease.");
 
   await prisma.$transaction([
     prisma.lease.create({

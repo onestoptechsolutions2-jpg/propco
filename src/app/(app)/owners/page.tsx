@@ -3,9 +3,10 @@ import { requireRole } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 
 export default async function OwnersPage() {
-  await requireRole("STAFF");
+  const user = await requireRole("STAFF");
 
   const owners = await prisma.owner.findMany({
+    where: { orgId: user.orgId },
     include: { properties: true },
     orderBy: { createdAt: "desc" },
   });

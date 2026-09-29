@@ -25,7 +25,7 @@ const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Expected YYYY-M
  * untouched, and owners with no collected rent that month are skipped.
  */
 export async function generatePayouts(formData: FormData) {
-  await requireRole("STAFF");
+  const user = await requireRole("STAFF");
 
   const month = monthSchema.parse(formData.get("month"));
   const [year, mon] = month.split("-").map(Number);
@@ -35,7 +35,7 @@ export async function generatePayouts(formData: FormData) {
   const periodEnd = new Date(Date.UTC(year, mon, 0, 23, 59, 59));
 
   const owners = await prisma.owner.findMany({
-    where: { properties: { some: { managementMode: "AGENCY_MANAGED" } } },
+    where: { orgId: user.orgId, properties: { some: { managementMode: "AGENCY_MANAGED" } } },
     include: {
       properties: {
         where: { managementMode: "AGENCY_MANAGED" },
@@ -115,13 +115,14 @@ const paidSchema = z.object({
 });
 
 export async function markPayoutPaid(payoutId: string, formData: FormData) {
-  await requireRole("STAFF");
+  const user = await requireRole("STAFF");
 
   const parsed = paidSchema.parse({
     method: formData.get("method"),
     reference: formData.get("reference") || undefined,
   });
 
+  await prisma.payout.findFirstOrThrow({ where: { id: payoutId, owner: { orgId: user.orgId } } });
   const payout = await prisma.payout.update({
     where: { id: payoutId },
     data: {

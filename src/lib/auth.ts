@@ -56,16 +56,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
+      // Also refresh while orgId is missing so a brand-new user's token picks
+      // it up right after onboarding/signup without signing out and in.
+      if (user || (token.sub && !token.orgId)) {
         // On first sign-in, `user` comes from `authorize()` (credentials)
         // or is created via the adapter (Google) — either way, look up role
         // fresh from the DB so it's always current.
         const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { role: true, ownerId: true },
+          where: { id: (user?.id ?? token.sub) as string },
+          select: { role: true, ownerId: true, orgId: true },
         });
         token.role = dbUser?.role ?? "STAFF";
         token.ownerId = dbUser?.ownerId ?? null;
+        token.orgId = dbUser?.orgId ?? null;
       }
       return token;
     },
@@ -74,6 +77,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.sub as string;
         session.user.role = token.role as Role;
         session.user.ownerId = (token.ownerId as string | null) ?? null;
+        session.user.orgId = (token.orgId as string | null) ?? null;
       }
       return session;
     },

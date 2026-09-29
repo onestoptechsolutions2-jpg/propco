@@ -11,7 +11,7 @@ export default async function DashboardPage() {
     prisma.unit.count({ where: { property: propertyFilter } }),
     prisma.unit.count({ where: { property: propertyFilter, status: "OCCUPIED" } }),
     user.role === "ADMIN" || user.role === "STAFF"
-      ? prisma.tenant.count()
+      ? prisma.tenant.count({ where: { orgId: user.orgId } })
       : Promise.resolve(null),
   ]);
 

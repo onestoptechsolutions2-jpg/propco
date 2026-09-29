@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser, canManageOwnerRecords } from "@/lib/access";
+import { assertCanAddUnits } from "@/lib/plans";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -33,16 +34,18 @@ export async function createProperty(formData: FormData) {
     commissionPct: formData.get("commissionPct") || undefined,
   });
 
-  if (!canManageOwnerRecords(user, parsed.ownerId)) {
+  const owner = await prisma.owner.findFirst({ where: { id: parsed.ownerId, orgId: user.orgId } });
+  if (!owner || !canManageOwnerRecords(user, owner.id, owner.orgId)) {
     throw new Error("You don't have permission to add a property for this owner.");
   }
 
   const property = await prisma.property.create({
-    data: parsed,
+    data: { ...parsed, orgId: user.orgId },
   });
 
   // A single-unit property gets one unit auto-created, per the spec.
   if (parsed.type === "SINGLE_UNIT") {
+    await assertCanAddUnits(user.orgId, 1);
     await prisma.unit.create({
       data: {
         propertyId: property.id,
@@ -60,7 +63,7 @@ export async function updateProperty(propertyId: string, formData: FormData) {
   const user = await requireUser();
   const existing = await prisma.property.findUniqueOrThrow({ where: { id: propertyId } });
 
-  if (!canManageOwnerRecords(user, existing.ownerId)) {
+  if (!canManageOwnerRecords(user, existing.ownerId, existing.orgId)) {
     throw new Error("You don't have permission to edit this property.");
   }
 
@@ -75,7 +78,8 @@ export async function updateProperty(propertyId: string, formData: FormData) {
     commissionPct: formData.get("commissionPct") || undefined,
   });
 
-  if (!canManageOwnerRecords(user, parsed.ownerId)) {
+  const newOwner = await prisma.owner.findFirst({ where: { id: parsed.ownerId, orgId: user.orgId } });
+  if (!newOwner || !canManageOwnerRecords(user, newOwner.id, newOwner.orgId)) {
     throw new Error("You don't have permission to reassign this property to that owner.");
   }
 
@@ -90,7 +94,7 @@ export async function deleteProperty(propertyId: string) {
   const user = await requireUser();
   const existing = await prisma.property.findUniqueOrThrow({ where: { id: propertyId } });
 
-  if (!canManageOwnerRecords(user, existing.ownerId)) {
+  if (!canManageOwnerRecords(user, existing.ownerId, existing.orgId)) {
     throw new Error("You don't have permission to delete this property.");
   }
 
@@ -110,9 +114,10 @@ export async function createUnit(propertyId: string, formData: FormData) {
   const user = await requireUser();
   const property = await prisma.property.findUniqueOrThrow({ where: { id: propertyId } });
 
-  if (!canManageOwnerRecords(user, property.ownerId)) {
+  if (!canManageOwnerRecords(user, property.ownerId, property.orgId)) {
     throw new Error("You don't have permission to add a unit to this property.");
   }
+  await assertCanAddUnits(user.orgId, 1);
 
   const parsed = unitSchema.parse({
     label: formData.get("label"),
@@ -135,10 +140,10 @@ export async function updateUnitStatus(
   const user = await requireUser();
   const property = await prisma.property.findUniqueOrThrow({ where: { id: propertyId } });
 
-  if (!canManageOwnerRecords(user, property.ownerId)) {
+  if (!canManageOwnerRecords(user, property.ownerId, property.orgId)) {
     throw new Error("You don't have permission to update this unit.");
   }
 
-  await prisma.unit.update({ where: { id: unitId }, data: { status } });
+  await prisma.unit.updateMany({ where: { id: unitId, propertyId }, data: { status } });
   revalidatePath(`/properties/${propertyId}`);
 }

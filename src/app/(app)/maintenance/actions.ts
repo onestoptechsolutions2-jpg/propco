@@ -13,7 +13,7 @@ async function assertCanManageUnit(unitId: string) {
     where: { id: unitId },
     include: { property: true },
   });
-  if (!canManageOwnerRecords(user, unit.property.ownerId)) {
+  if (!canManageOwnerRecords(user, unit.property.ownerId, unit.property.orgId)) {
     throw new Error("You don't have permission to manage maintenance for this unit.");
   }
   return unit;
@@ -56,7 +56,7 @@ export async function assignSupplier(requestId: string, formData: FormData) {
     include: { unit: { include: { property: true } } },
   });
   const user = await requireUser();
-  if (!canManageOwnerRecords(user, request.unit.property.ownerId)) {
+  if (!canManageOwnerRecords(user, request.unit.property.ownerId, request.unit.property.orgId)) {
     throw new Error("You don't have permission to update this request.");
   }
 
@@ -64,6 +64,9 @@ export async function assignSupplier(requestId: string, formData: FormData) {
     supplierId: formData.get("supplierId"),
     costEstimate: formData.get("costEstimate") || undefined,
   });
+
+  const supplier = await prisma.supplier.findFirst({ where: { id: parsed.supplierId, orgId: user.orgId } });
+  if (!supplier) throw new Error("Unknown supplier.");
 
   await prisma.maintenanceRequest.update({
     where: { id: requestId },
@@ -89,7 +92,7 @@ export async function setStatus(
     include: { unit: { include: { property: true } } },
   });
   const user = await requireUser();
-  if (!canManageOwnerRecords(user, request.unit.property.ownerId)) {
+  if (!canManageOwnerRecords(user, request.unit.property.ownerId, request.unit.property.orgId)) {
     throw new Error("You don't have permission to update this request.");
   }
 
@@ -113,7 +116,7 @@ export async function completeRequest(requestId: string, formData: FormData) {
     include: { unit: { include: { property: true } } },
   });
   const user = await requireUser();
-  if (!canManageOwnerRecords(user, request.unit.property.ownerId)) {
+  if (!canManageOwnerRecords(user, request.unit.property.ownerId, request.unit.property.orgId)) {
     throw new Error("You don't have permission to update this request.");
   }
 

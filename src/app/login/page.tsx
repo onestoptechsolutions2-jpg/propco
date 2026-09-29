@@ -1,6 +1,7 @@
 import { signIn } from "@/lib/auth";
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 async function googleSignIn(formData: FormData) {
   "use server";
@@ -95,6 +96,13 @@ export default async function LoginPage({
             Sign in
           </button>
         </form>
+
+        <p className="mt-6 text-center text-sm text-muted">
+          New here?{" "}
+          <Link href="/signup" className="text-accent hover:underline">
+            Start a free trial
+          </Link>
+        </p>
       </div>
     </div>
   );

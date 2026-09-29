@@ -3,9 +3,10 @@ import { requireRole } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 
 export default async function TenantsPage() {
-  await requireRole("STAFF", "LANDLORD");
+  const user = await requireRole("STAFF", "LANDLORD");
 
   const tenants = await prisma.tenant.findMany({
+    where: { orgId: user.orgId },
     include: { leases: { where: { status: "ACTIVE" }, include: { unit: { include: { property: true } } } } },
     orderBy: { createdAt: "desc" },
   });

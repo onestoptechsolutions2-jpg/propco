@@ -6,9 +6,9 @@ import { revalidatePath } from "next/cache";
 
 /** Staff tapped "Send on WhatsApp" and the message was handed to their device. */
 export async function markNotificationSent(id: string) {
-  await requireRole("STAFF");
+  const user = await requireRole("STAFF");
   await prisma.notification.updateMany({
-    where: { id, status: "QUEUED", channel: "WHATSAPP" },
+    where: { id, orgId: user.orgId, status: "QUEUED", channel: "WHATSAPP" },
     data: { status: "SENT", sentAt: new Date(), error: null },
   });
   revalidatePath("/notifications");

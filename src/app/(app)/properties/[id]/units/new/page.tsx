@@ -13,7 +13,7 @@ export default async function NewUnitPage({
 
   const property = await prisma.property.findUnique({ where: { id } });
   if (!property) notFound();
-  if (!canManageOwnerRecords(user, property.ownerId)) notFound();
+  if (!canManageOwnerRecords(user, property.ownerId, property.orgId)) notFound();
 
   const createUnitForProperty = createUnit.bind(null, property.id);
 

@@ -26,6 +26,7 @@ export default async function PayoutsPage({
   const payouts = await prisma.payout.findMany({
     where: {
       periodStart,
+      owner: { orgId: user.orgId },
       ...(isStaff ? {} : { ownerId: user.ownerId ?? "__none__" }),
     },
     include: { owner: true },

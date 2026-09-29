@@ -16,6 +16,7 @@
 import type { NotifyChannel, PrismaClient } from "@prisma/client";
 
 export type Recipient = {
+  orgId: string;
   name: string;
   email?: string | null;
   phone?: string | null;
@@ -42,6 +43,7 @@ export async function notify(
   try {
     await db.notification.create({
       data: {
+        orgId: to.orgId,
         event: args.event,
         channel,
         recipientName: to.name,

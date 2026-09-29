@@ -6,7 +6,7 @@ export default async function NewPropertyPage() {
   const user = await requireRole("STAFF", "LANDLORD");
 
   const owners = await prisma.owner.findMany({
-    where: user.role === "LANDLORD" && user.ownerId ? { id: user.ownerId } : {},
+    where: { orgId: user.orgId, ...(user.role === "LANDLORD" && user.ownerId ? { id: user.ownerId } : {}) },
     orderBy: { name: "asc" },
   });
 

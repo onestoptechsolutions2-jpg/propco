@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/access";
+import { requireRole, ownerScopeFilter } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { updateTenant, deleteTenant, createLease } from "../../actions";
 
@@ -9,15 +9,15 @@ export default async function EditTenantPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await requireRole("STAFF", "LANDLORD");
+  const user = await requireRole("STAFF", "LANDLORD");
 
   const [tenant, vacantUnits] = await Promise.all([
-    prisma.tenant.findUnique({
-      where: { id },
+    prisma.tenant.findFirst({
+      where: { id, orgId: user.orgId },
       include: { leases: { where: { status: "ACTIVE" }, include: { unit: { include: { property: true } } } } },
     }),
     prisma.unit.findMany({
-      where: { status: "VACANT" },
+      where: { status: "VACANT", property: ownerScopeFilter(user) },
       include: { property: true },
       orderBy: { property: { name: "asc" } },
     }),

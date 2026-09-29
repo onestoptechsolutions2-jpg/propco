@@ -17,7 +17,7 @@ const ownerSchema = z.object({
 });
 
 export async function createOwner(formData: FormData) {
-  await requireRole("STAFF");
+  const user = await requireRole("STAFF");
 
   const parsed = ownerSchema.parse({
     name: formData.get("name"),
@@ -30,7 +30,7 @@ export async function createOwner(formData: FormData) {
   });
 
   const owner = await prisma.owner.create({
-    data: { ...parsed, email: parsed.email || undefined },
+    data: { ...parsed, email: parsed.email || undefined, orgId: user.orgId },
   });
 
   revalidatePath("/owners");
@@ -38,7 +38,7 @@ export async function createOwner(formData: FormData) {
 }
 
 export async function updateOwner(ownerId: string, formData: FormData) {
-  await requireRole("STAFF");
+  const user = await requireRole("STAFF");
 
   const parsed = ownerSchema.parse({
     name: formData.get("name"),
@@ -51,7 +51,7 @@ export async function updateOwner(ownerId: string, formData: FormData) {
   });
 
   await prisma.owner.update({
-    where: { id: ownerId },
+    where: { id: ownerId, orgId: user.orgId },
     data: { ...parsed, email: parsed.email || undefined },
   });
 
@@ -61,8 +61,8 @@ export async function updateOwner(ownerId: string, formData: FormData) {
 }
 
 export async function deleteOwner(ownerId: string) {
-  await requireRole("STAFF");
-  await prisma.owner.delete({ where: { id: ownerId } });
+  const user = await requireRole("STAFF");
+  await prisma.owner.delete({ where: { id: ownerId, orgId: user.orgId } });
   revalidatePath("/owners");
   redirect("/owners");
 }

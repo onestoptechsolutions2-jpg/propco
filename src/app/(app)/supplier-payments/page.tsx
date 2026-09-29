@@ -6,10 +6,10 @@ const fmt = (value: unknown) =>
   Number(value ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default async function SupplierPaymentsPage() {
-  await requireRole("STAFF");
+  const user = await requireRole("STAFF");
 
   const jobs = await prisma.maintenanceRequest.findMany({
-    where: { status: "DONE", supplierId: { not: null } },
+    where: { status: "DONE", supplierId: { not: null }, unit: { property: { orgId: user.orgId } } },
     include: { supplier: true, unit: { include: { property: true } } },
     orderBy: [{ supplierPaidAt: { sort: "asc", nulls: "first" } }, { completedAt: "desc" }],
   });

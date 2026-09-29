@@ -15,8 +15,8 @@ export default async function OwnerDetailPage({
   const isStaff = user.role === "ADMIN" || user.role === "STAFF";
   if (!isStaff && user.ownerId !== id) notFound();
 
-  const owner = await prisma.owner.findUnique({
-    where: { id },
+  const owner = await prisma.owner.findFirst({
+    where: { id, orgId: user.orgId },
     include: { properties: { include: { units: true } } },
   });
 

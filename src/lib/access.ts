@@ -11,7 +11,9 @@ import { redirect } from "next/navigation";
 export async function requireUser() {
   const session = await auth();
   if (!session?.user) redirect("/login");
-  return session.user;
+  // Signed in (e.g. first Google login) but not yet attached to a company.
+  if (!session.user.orgId) redirect("/onboarding");
+  return session.user as typeof session.user & { orgId: string };
 }
 
 /**
@@ -31,9 +33,11 @@ export async function requireRole(...roles: Role[]) {
  * when it's their own ownerId; false for read-only OWNER.
  */
 export function canManageOwnerRecords(
-  user: { role: Role; ownerId: string | null },
-  ownerId: string
+  user: { role: Role; ownerId: string | null; orgId: string },
+  ownerId: string,
+  recordOrgId: string
 ) {
+  if (user.orgId !== recordOrgId) return false; // never cross company boundaries
   if (user.role === "ADMIN" || user.role === "STAFF") return true;
   if (user.role === "LANDLORD" && user.ownerId === ownerId) return true;
   return false;
@@ -44,10 +48,10 @@ export function canManageOwnerRecords(
  * user is allowed to see. STAFF/ADMIN see everything; OWNER and
  * LANDLORD only see their own portfolio.
  */
-export function ownerScopeFilter(user: { role: Role; ownerId: string | null }) {
-  if (user.role === "ADMIN" || user.role === "STAFF") return {};
-  if (user.ownerId) return { ownerId: user.ownerId };
-  return { ownerId: "__none__" }; // no owner linked -> sees nothing
+export function ownerScopeFilter(user: { role: Role; ownerId: string | null; orgId: string }) {
+  if (user.role === "ADMIN" || user.role === "STAFF") return { orgId: user.orgId };
+  if (user.ownerId) return { orgId: user.orgId, ownerId: user.ownerId };
+  return { orgId: user.orgId, ownerId: "__none__" }; // no owner linked -> sees nothing
 }
 
 export async function getOwnerForUser(userId: string) {

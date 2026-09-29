@@ -10,12 +10,12 @@ export default async function GuidePage({ searchParams }: { searchParams: Promis
   const { g } = await searchParams;
 
   const [owners, properties, units, tenants, leases, suppliers, payments, requests] = await Promise.all([
-    isStaff ? prisma.owner.count() : Promise.resolve(1),
+    isStaff ? prisma.owner.count({ where: { orgId: user.orgId } }) : Promise.resolve(1),
     prisma.property.count({ where: scope }),
     prisma.unit.count({ where: { property: scope } }),
-    prisma.tenant.count(),
+    prisma.tenant.count({ where: { orgId: user.orgId } }),
     prisma.lease.count({ where: { status: "ACTIVE", unit: { property: scope } } }),
-    prisma.supplier.count(),
+    prisma.supplier.count({ where: { orgId: user.orgId } }),
     prisma.payment.count({ where: { status: "PAID", lease: { unit: { property: scope } } } }),
     prisma.maintenanceRequest.count({ where: { unit: { property: scope } } }),
   ]);

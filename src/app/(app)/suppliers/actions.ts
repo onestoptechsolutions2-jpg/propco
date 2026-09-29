@@ -31,11 +31,11 @@ function parseSupplier(formData: FormData) {
 }
 
 export async function createSupplier(formData: FormData) {
-  await requireRole("STAFF", "LANDLORD");
+  const user = await requireRole("STAFF", "LANDLORD");
   const parsed = parseSupplier(formData);
 
   await prisma.supplier.create({
-    data: { ...parsed, email: parsed.email || undefined },
+    data: { ...parsed, email: parsed.email || undefined, orgId: user.orgId },
   });
 
   revalidatePath("/suppliers");
@@ -43,11 +43,11 @@ export async function createSupplier(formData: FormData) {
 }
 
 export async function updateSupplier(supplierId: string, formData: FormData) {
-  await requireRole("STAFF", "LANDLORD");
+  const user = await requireRole("STAFF", "LANDLORD");
   const parsed = parseSupplier(formData);
 
   await prisma.supplier.update({
-    where: { id: supplierId },
+    where: { id: supplierId, orgId: user.orgId },
     data: { ...parsed, email: parsed.email || undefined },
   });
 
@@ -56,8 +56,8 @@ export async function updateSupplier(supplierId: string, formData: FormData) {
 }
 
 export async function deleteSupplier(supplierId: string) {
-  await requireRole("STAFF", "LANDLORD");
-  await prisma.supplier.delete({ where: { id: supplierId } });
+  const user = await requireRole("STAFF", "LANDLORD");
+  await prisma.supplier.delete({ where: { id: supplierId, orgId: user.orgId } });
   revalidatePath("/suppliers");
   redirect("/suppliers");
 }

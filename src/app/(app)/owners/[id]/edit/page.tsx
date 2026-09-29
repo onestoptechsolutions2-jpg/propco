@@ -9,9 +9,9 @@ export default async function EditOwnerPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await requireRole("STAFF");
+  const user = await requireRole("STAFF");
 
-  const owner = await prisma.owner.findUnique({ where: { id } });
+  const owner = await prisma.owner.findFirst({ where: { id, orgId: user.orgId } });
   if (!owner) notFound();
 
   const updateOwnerWithId = updateOwner.bind(null, owner.id);

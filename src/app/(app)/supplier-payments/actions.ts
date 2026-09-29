@@ -13,14 +13,16 @@ const paidSchema = z.object({
 });
 
 export async function markSupplierPaid(requestId: string, formData: FormData) {
-  await requireRole("STAFF");
+  const user = await requireRole("STAFF");
 
   const parsed = paidSchema.parse({
     method: formData.get("method"),
     reference: formData.get("reference") || undefined,
   });
 
-  const request = await prisma.maintenanceRequest.findUniqueOrThrow({ where: { id: requestId } });
+  const request = await prisma.maintenanceRequest.findFirstOrThrow({
+    where: { id: requestId, unit: { property: { orgId: user.orgId } } },
+  });
   if (request.status !== "DONE" || !request.supplierId) {
     throw new Error("Only completed, supplier-assigned jobs can be paid.");
   }

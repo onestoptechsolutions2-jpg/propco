@@ -22,6 +22,8 @@ enum Role {
 }
 
 model User {
+  orgId String?
+  org   Organization? @relation(fields: [orgId], references: [id])
   id            String    @id @default(cuid())
   name          String?
   email         String?   @unique
@@ -95,14 +97,19 @@ enum PropertyStatus {
 }
 
 model Owner {
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id])
   id            String   @id @default(cuid())
   name          String
-  email         String?  @unique
+  email         String?
   phone         String?
   payoutMethod  String? // "mpesa" | "bank" | "card" — free text for now, structured later
   bankDetails   String? // JSON-ish free text for v1; formalize in a later phase
   mpesaNumber   String?
   isSelfManaging Boolean @default(false)
+
+  @@unique([orgId, email])
+  @@index([orgId])
 
   user       User?
   properties Property[]
@@ -114,6 +121,8 @@ model Owner {
 }
 
 model Property {
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id])
   id              String         @id @default(cuid())
   name            String
   addressLine1    String
@@ -163,6 +172,8 @@ model Unit {
 }
 
 model Tenant {
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id])
   id    String  @id @default(cuid())
   name  String
   email String?
@@ -296,6 +307,8 @@ enum MaintenanceStatus {
 }
 
 model Supplier {
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id])
   id      String        @id @default(cuid())
   name    String
   trade   SupplierTrade @default(GENERAL)
@@ -364,6 +377,8 @@ enum NotificationStatus {
 // whichever provider is configured (see src/lib/notify.ts). dedupeKey makes
 // scheduled events (e.g. "rent late for payment X") idempotent.
 model Notification {
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id])
   id            String             @id @default(cuid())
   event         String // e.g. "RENT_LATE", "PAYOUT_SENT"
   channel       NotifyChannel
@@ -379,4 +394,36 @@ model Notification {
 
   @@index([status])
   @@index([createdAt])
+}
+
+// ---------- Multi-tenancy & billing (SaaS) ----------
+
+enum Plan {
+  FREE // up to 5 units, forever
+  GROWTH
+  PRO
+  SCALE
+}
+
+// One row per customer company (agency or landlord). Every business record
+// belongs to exactly one. During the trial (trialEndsAt) limits are lifted;
+// after it, unit limits follow `plan` until `paidUntil` (set when a payment
+// is confirmed) - see src/lib/plans.ts.
+model Organization {
+  id          String    @id @default(cuid())
+  name        String
+  plan        Plan      @default(FREE)
+  trialEndsAt DateTime
+  paidUntil   DateTime?
+  billingNote String?
+
+  users         User[]
+  owners        Owner[]
+  properties    Property[]
+  tenants       Tenant[]
+  suppliers     Supplier[]
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

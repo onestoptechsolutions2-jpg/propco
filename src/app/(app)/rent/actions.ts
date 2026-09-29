@@ -24,7 +24,7 @@ export async function recordPayment(leaseId: string, formData: FormData) {
     include: { unit: { include: { property: true } } },
   });
 
-  if (!canManageOwnerRecords(user, lease.unit.property.ownerId)) {
+  if (!canManageOwnerRecords(user, lease.unit.property.ownerId, lease.unit.property.orgId)) {
     throw new Error("You don't have permission to record a payment for this lease.");
   }
 
@@ -65,12 +65,12 @@ export async function markPaymentPaid(leaseId: string, paymentId: string) {
     include: { unit: { include: { property: true } } },
   });
 
-  if (!canManageOwnerRecords(user, lease.unit.property.ownerId)) {
+  if (!canManageOwnerRecords(user, lease.unit.property.ownerId, lease.unit.property.orgId)) {
     throw new Error("You don't have permission to update this payment.");
   }
 
-  await prisma.payment.update({
-    where: { id: paymentId },
+  await prisma.payment.updateMany({
+    where: { id: paymentId, leaseId },
     data: { status: "PAID", paidDate: new Date() },
   });
   await notifyPaymentReceived(paymentId);

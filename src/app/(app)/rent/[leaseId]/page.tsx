@@ -27,11 +27,11 @@ export default async function LeasePaymentsPage({
     },
   });
 
-  if (!lease) notFound();
-  if (!canManageOwnerRecords(user, lease.unit.property.ownerId) && user.role !== "OWNER") notFound();
+  if (!lease || lease.unit.property.orgId !== user.orgId) notFound();
+  if (!canManageOwnerRecords(user, lease.unit.property.ownerId, lease.unit.property.orgId) && user.role !== "OWNER") notFound();
   if (user.role === "OWNER" && user.ownerId !== lease.unit.property.ownerId) notFound();
 
-  const canRecord = canManageOwnerRecords(user, lease.unit.property.ownerId);
+  const canRecord = canManageOwnerRecords(user, lease.unit.property.ownerId, lease.unit.property.orgId);
   const recordPaymentForLease = recordPayment.bind(null, lease.id);
 
   return (

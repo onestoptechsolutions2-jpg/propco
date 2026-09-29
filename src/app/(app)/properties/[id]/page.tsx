@@ -24,9 +24,9 @@ export default async function PropertyDetailPage({
     include: { owner: true, units: { include: { leases: { where: { status: "ACTIVE" }, include: { tenant: true } } } } },
   });
 
-  if (!property) notFound();
+  if (!property || property.orgId !== user.orgId) notFound();
 
-  const canEdit = canManageOwnerRecords(user, property.ownerId);
+  const canEdit = canManageOwnerRecords(user, property.ownerId, property.orgId);
 
   if (user.role === "OWNER" && user.ownerId !== property.ownerId) notFound();
   if (user.role === "LANDLORD" && user.ownerId !== property.ownerId) notFound();
