@@ -62,6 +62,10 @@ customers, `/team` to add staff, and `/platform` (emails in
 after you receive their M-Pesa payment. Existing data is moved into one
 unlimited company by migration `20260107000000_multi_tenancy`.
 
+**Owner statements:** each payout row has a *Statement* link: a print-ready
+breakdown (rent received per unit, commission, repairs, net) with a
+"Print / Save as PDF" button. Owners see their own; no PDF library needed.
+
 Later phases (invoicing, payroll,
 documents, reporting, analytics) build on this foundation without changing
 what's here.

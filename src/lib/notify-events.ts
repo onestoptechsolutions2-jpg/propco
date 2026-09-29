@@ -30,7 +30,7 @@ export async function notifyPayoutSent(payoutId: string) {
     event: "PAYOUT_SENT",
     to: p.owner,
     subject: `Your ${month} payout has been sent`,
-    body: `${kes(p.netAmount)} sent via ${p.method}${p.reference ? ` (ref ${p.reference})` : ""}.`,
+    body: `${kes(p.netAmount)} sent via ${p.method}${p.reference ? ` (ref ${p.reference})` : ""}. Open Owner payouts in PropCo and tap Statement for the full breakdown.`,
     dedupeKey: `PAYOUT_SENT:${p.id}`,
   });
 }

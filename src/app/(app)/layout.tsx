@@ -109,10 +109,10 @@ export default async function AppLayout({
         roleLabel={user.role.toLowerCase()}
         signOutAction={doSignOut}
       />
-      <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8 md:px-10 md:py-10">
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8 md:px-10 md:py-10 print:p-0">
         <PwaSetup />
         {user.role === "ADMIN" && (status.inTrial || overLimit || status.lapsed) && (
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-accent-light px-4 py-3 text-sm text-ink">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-accent-light px-4 py-3 text-sm text-ink print:hidden">
             <p>
               {status.inTrial
                 ? `Free trial: ${status.trialDaysLeft} day${status.trialDaysLeft === 1 ? "" : "s"} left. After that, the free plan covers ${PLANS.FREE.maxUnits} units.`

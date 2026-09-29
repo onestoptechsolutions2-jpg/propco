@@ -78,7 +78,7 @@ export function AppNav({
   return (
     <>
       {/* Mobile top bar */}
-      <div className="sticky top-0 z-20 flex items-center justify-between bg-ink px-4 py-3 text-white md:hidden">
+      <div className="sticky top-0 z-20 flex items-center justify-between bg-ink px-4 py-3 text-white md:hidden print:hidden">
         <span className="font-serif text-lg tracking-tight">PropCo</span>
         <button
           type="button"
@@ -99,7 +99,7 @@ export function AppNav({
       )}
 
       {/* Desktop sidebar */}
-      <aside className="hidden border-border bg-ink text-white md:flex md:w-64 md:flex-shrink-0 md:flex-col">
+      <aside className="hidden print:!hidden border-border bg-ink text-white md:flex md:w-64 md:flex-shrink-0 md:flex-col">
         <div className="px-6 py-5">
           <span className="font-serif text-xl tracking-tight">PropCo</span>
         </div>

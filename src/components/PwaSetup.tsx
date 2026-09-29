@@ -42,7 +42,7 @@ export function PwaSetup() {
   if (dismissed || (!installEvent && !isIos)) return null;
 
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-accent-light px-4 py-3 text-sm text-ink">
+    <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-accent-light px-4 py-3 text-sm text-ink print:hidden">
       <p className="flex-1">
         <strong>Install PropCo on this device</strong> for one-tap access.
         {!installEvent && isIos && " Tap the Share button, then “Add to Home Screen”."}

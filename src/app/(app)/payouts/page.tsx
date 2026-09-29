@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { generatePayouts, markPayoutPaid } from "./actions";
@@ -131,6 +132,12 @@ export default async function PayoutsPage({
                     )}
                   </td>
                   <td className="px-4 py-3">
+                    <Link
+                      href={`/payouts/${payout.id}/statement`}
+                      className="mr-3 text-xs font-medium text-accent hover:underline"
+                    >
+                      Statement
+                    </Link>
                     {isStaff && payout.status === "PENDING" && (
                       <form
                         action={markPayoutPaid.bind(null, payout.id)}
