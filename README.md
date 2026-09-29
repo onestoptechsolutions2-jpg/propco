@@ -25,6 +25,15 @@ read-only view of their own payouts.
 at 00:05 (and once on boot) it creates a Pending rent row for each active
 lease that has none this month, and flips overdue Pending rows to Late.
 
+**Phase 4** (done): maintenance & suppliers. `/suppliers` — a directory of
+contractors by trade (plumber, electrician, carpenter, painter, general).
+`/maintenance` — log a request against a unit, assign it to a supplier with
+a cost estimate, track it through in-progress to done with an actual cost.
+Owners get a read-only view scoped to their own properties; staff/landlords
+can log, assign, and close requests. **Not yet wired up:** maintenance
+costs aren't deducted from owner payouts yet — `/payouts` still only
+computes gross rent minus commission (see "What's next").
+
 Later phases (maintenance/suppliers, invoicing, payroll,
 documents, reporting, analytics) build on this foundation without changing
 what's here.
@@ -131,9 +140,18 @@ the platform spec doc).
   (`/api/mpesa/callback`) that Safaricom calls back with the result —
   which would then create/update a `Payment` row automatically instead of
   a staff member entering it by hand.
-- After that: supplier & maintenance management, invoicing, payroll, documents & contracts, reporting, and analytics — see
-  `property-management-platform-spec.md` for the full module list and
-  build-phase order.
+- **Maintenance costs into payouts**: `/payouts` generation should subtract
+  that month's `MaintenanceRequest.actualCost` (for `DONE` requests on the
+  owner's properties) from the gross before applying commission — not done
+  yet, so a payout currently overstates the owner's net if there was paid
+  maintenance work that month.
+- **Supplier payments**: track and mark suppliers as paid for completed
+  jobs — `MaintenanceRequest.actualCost` is recorded but nothing pays the
+  supplier or marks that payment done yet, same pattern as `/payouts`,
+  just for suppliers instead of owners.
+- After that: invoicing, payroll, documents & contracts, reporting, and
+  analytics — see `property-management-platform-spec.md` for the full
+  module list and build-phase order.
 
 ## Known limitation in this sandbox
 

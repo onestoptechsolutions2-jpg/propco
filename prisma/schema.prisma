@@ -153,6 +153,7 @@ model Unit {
   propertyId String
 
   leases Lease[]
+  maintenanceRequests MaintenanceRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -270,4 +271,67 @@ model Payout {
 
   @@unique([ownerId, periodStart])
   @@index([ownerId])
+}
+
+// ---------- Maintenance & suppliers (Phase 4) ----------
+
+enum SupplierTrade {
+  PLUMBER
+  ELECTRICIAN
+  CARPENTER
+  PAINTER
+  GENERAL
+  OTHER
+}
+
+enum MaintenanceStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+model Supplier {
+  id      String        @id @default(cuid())
+  name    String
+  trade   SupplierTrade @default(GENERAL)
+  phone   String?
+  email   String?
+  rate    Decimal?      @db.Decimal(10, 2) // informational call-out/hourly rate
+  payoutMethod String?
+  mpesaNumber  String?
+
+  requests MaintenanceRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// A request and its work order are the same row here: supplierId null
+// means "open, unassigned"; setting it is the assignment; status/actualCost
+// track it through to completion. Kept as one model rather than splitting
+// MaintenanceRequest/WorkOrder (per the original spec) to fit this phase's
+// scope — splitting them later, if a request ever needs multiple suppliers
+// or re-assignment history, is a straightforward follow-up.
+model MaintenanceRequest {
+  id           String            @id @default(cuid())
+  description  String
+  status       MaintenanceStatus @default(OPEN)
+  reportedBy   String? // free text for now: tenant name, "staff", etc.
+  costEstimate Decimal?          @db.Decimal(10, 2)
+  actualCost   Decimal?          @db.Decimal(10, 2)
+  completedAt  DateTime?
+
+  unit   Unit   @relation(fields: [unitId], references: [id])
+  unitId String
+
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+  supplierId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([unitId])
+  @@index([supplierId])
 }

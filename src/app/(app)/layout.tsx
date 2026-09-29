@@ -10,6 +10,8 @@ const NAV: { href: string; label: string; roles?: Role[] }[] = [
   { href: "/rent", label: "Rent", roles: ["ADMIN", "STAFF", "LANDLORD"] },
   // Landlords collect their own rent, so agency payouts don't apply to them.
   { href: "/payouts", label: "Payouts", roles: ["ADMIN", "STAFF", "OWNER"] },
+  { href: "/maintenance", label: "Maintenance" },
+  { href: "/suppliers", label: "Suppliers", roles: ["ADMIN", "STAFF", "LANDLORD"] },
   { href: "/owners", label: "Owners", roles: ["ADMIN", "STAFF"] },
   { href: "/tenants", label: "Tenants", roles: ["ADMIN", "STAFF", "LANDLORD"] },
 ];

@@ -75,6 +75,12 @@ export default async function DashboardPage() {
                 </Link>{" "}
                 and record this month&apos;s payments.
               </li>
+              <li>
+                <Link href="/maintenance" className="text-accent hover:underline">
+                  Log a maintenance request
+                </Link>{" "}
+                or check on open jobs.
+              </li>
             </>
           )}
           {user.role === "LANDLORD" && (
