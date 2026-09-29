@@ -454,6 +454,7 @@ model Organization {
   suppliers     Supplier[]
   notifications Notification[]
   proofs        PaymentProof[]
+  serviceLeads  ServiceLead[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -680,4 +681,58 @@ model Booking {
   createdAt DateTime @default(now())
 
   @@index([unitId, checkIn])
+}
+
+// ---------- Services and insurance marketplace ----------
+
+enum ServiceCategory {
+  INSURANCE
+  CLEANING
+  MOVERS
+  INTERNET
+  SECURITY
+  SOLAR
+  LEGAL
+  OTHER
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  WON
+  LOST
+}
+
+// A vetted provider the platform recommends to every company. Managed by
+// platform admins; commissionNote records the referral deal (not shown to customers).
+model ServicePartner {
+  id             String          @id @default(cuid())
+  name           String
+  category       ServiceCategory
+  description    String?
+  phone          String // WhatsApp number quotes are requested on
+  commissionNote String?
+  active         Boolean         @default(true)
+
+  leads ServiceLead[]
+
+  createdAt DateTime @default(now())
+}
+
+// A customer asked a partner for a quote through PropCo: the referral to track.
+model ServiceLead {
+  id            String     @id @default(cuid())
+  note          String?
+  status        LeadStatus @default(NEW)
+  commissionKes Decimal?   @db.Decimal(10, 2) // what PropCo earned once WON
+
+  partner   ServicePartner @relation(fields: [partnerId], references: [id])
+  partnerId String
+  org       Organization   @relation(fields: [orgId], references: [id])
+  orgId     String
+
+  createdAt DateTime @default(now())
+
+  @@index([orgId])
+  @@index([partnerId])
 }

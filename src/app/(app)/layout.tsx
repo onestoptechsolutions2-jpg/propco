@@ -62,6 +62,7 @@ const NAV: Group[] = [
       { href: "/maintenance", label: "Repair requests" },
       { href: "/maintenance/schedule", label: "Preventive calendar", hint: "Recurring jobs", roles: MANAGERS },
       { href: "/suppliers", label: "Suppliers", roles: MANAGERS },
+      { href: "/services", label: "Services & insurance", hint: "Trusted providers", roles: MANAGERS },
     ],
   },
   {
@@ -107,7 +108,7 @@ export default async function AppLayout({
   const overLimit = status.maxUnits !== Infinity && unitCount >= status.maxUnits;
 
   const nav: Group[] = isPlatformAdmin(user.email)
-    ? [...NAV, { title: "Platform", items: [{ href: "/platform", label: "All companies" }] }]
+    ? [...NAV, { title: "Platform", items: [{ href: "/platform", label: "All companies" }, { href: "/platform/partners", label: "Service partners" }] }]
     : NAV;
 
   const groups: NavGroup[] = nav.map((g) => ({

@@ -97,6 +97,11 @@ or check-out; the code is set on the lock by a person, no lock API yet); and
 short stays for homestays/BnBs (`/stays`: bookings without double-booking,
 guest door codes, welcome message, turnover cleaning, occupancy and revenue).
 
+**Services and insurance marketplace:** `/services` lists vetted providers
+(insurance, cleaning, movers, internet, security, solar, legal). "Get a quote on
+WhatsApp" logs a lead and opens WhatsApp to the provider. Platform admins manage
+partners and track leads and referral earnings at `/platform/partners`.
+
 Later phases (payroll, payroll,
 documents, reporting, analytics) build on this foundation without changing
 what's here.
