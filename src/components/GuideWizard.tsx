@@ -29,7 +29,11 @@ export function GuideWizard({
   const [stepIndex, setStepIndex] = useState(0);
   const [manual, setManual] = useState<Record<string, boolean>>({});
 
-  useEffect(() => setManual(load()), []);
+  // Read saved ticks after mount (localStorage doesn't exist during SSR).
+  useEffect(() => {
+    const t = setTimeout(() => setManual(load()), 0);
+    return () => clearTimeout(t);
+  }, []);
 
   const isDone = (guide: Guide, i: number) => {
     const step = guide.steps[i];

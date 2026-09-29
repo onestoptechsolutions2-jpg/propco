@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getManagedLease } from "@/lib/lease-access";
 import { prisma } from "@/lib/prisma";
@@ -34,9 +35,9 @@ export default async function ClearancePage({ params }: { params: Promise<{ id: 
   return (
     <div className="mx-auto max-w-3xl print:max-w-none">
       <div className="mb-4 flex items-center justify-between print:hidden">
-        <a href="/leases" className="text-sm text-muted hover:underline">
+        <Link href="/leases" className="text-sm text-muted hover:underline">
           ← Back
-        </a>
+        </Link>
         <PrintButton label="Print / Save as PDF" />
       </div>
 

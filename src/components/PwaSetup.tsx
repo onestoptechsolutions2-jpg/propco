@@ -21,15 +21,21 @@ export function PwaSetup() {
     try {
       wasDismissed = localStorage.getItem("propco-install-dismissed") === "1";
     } catch {}
-    setDismissed(standalone || wasDismissed);
-    setIsIos(/iphone|ipad|ipod/i.test(navigator.userAgent));
+    // Deferred so state isn't set synchronously inside the effect body.
+    const t = setTimeout(() => {
+      setDismissed(standalone || wasDismissed);
+      setIsIos(/iphone|ipad|ipod/i.test(navigator.userAgent));
+    }, 0);
 
     const onPrompt = (e: Event) => {
       e.preventDefault();
       setInstallEvent(e as InstallEvent);
     };
     window.addEventListener("beforeinstallprompt", onPrompt);
-    return () => window.removeEventListener("beforeinstallprompt", onPrompt);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("beforeinstallprompt", onPrompt);
+    };
   }, []);
 
   function dismiss() {
