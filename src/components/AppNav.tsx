@@ -20,7 +20,11 @@ function NavList({ groups, onNavigate }: { groups: NavGroup[]; onNavigate?: () =
           )}
           <div className="flex flex-col gap-0.5">
             {group.items.map((item) => {
-              const active = pathname === item.href || pathname.startsWith(item.href + "/");
+              const matches = (href: string) => pathname === href || pathname.startsWith(href + "/");
+              // Only the most specific matching item is highlighted (e.g. /rent/confirm, not /rent).
+              const active =
+                matches(item.href) &&
+                !groups.some((g) => g.items.some((o) => o.href.length > item.href.length && matches(o.href)));
               return (
                 <Link
                   key={item.href}

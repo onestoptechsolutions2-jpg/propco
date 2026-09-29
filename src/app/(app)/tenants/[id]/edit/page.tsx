@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { tenantReliability } from "@/lib/reliability";
 import { prisma } from "@/lib/prisma";
 import { updateTenant, deleteTenant, createLease } from "../../actions";
 
@@ -28,10 +30,33 @@ export default async function EditTenantPage({
   const updateTenantWithId = updateTenant.bind(null, tenant.id);
   const deleteTenantWithId = deleteTenant.bind(null, tenant.id);
   const activeLease = tenant.leases[0];
+  const rel = await tenantReliability(tenant.id, user.orgId);
+  const relColor =
+    rel.rating === "Excellent" || rel.rating === "Good"
+      ? "text-accent"
+      : rel.rating === "Poor"
+        ? "text-danger"
+        : "text-ink";
 
   return (
     <div className="max-w-lg">
       <h1 className="font-serif text-3xl text-ink">Edit tenant</h1>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-4 py-3 text-sm">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted">Rent reliability</p>
+          <p className={`font-serif text-xl ${relColor}`}>
+            {rel.rating}
+            {rel.score !== null && <span className="text-sm text-muted"> · {rel.score}/100</span>}
+          </p>
+          <p className="text-xs text-muted">
+            {rel.onTime} on time · {rel.late} late · {rel.unpaid} unpaid of {rel.periods} months due
+          </p>
+        </div>
+        <Link href={`/tenants/${tenant.id}/reference`} className="text-sm font-medium text-accent hover:underline">
+          Payment reference letter
+        </Link>
+      </div>
 
       <form action={updateTenantWithId} className="mt-8 flex flex-col gap-4">
         <Field label="Full name" name="name" defaultValue={tenant.name} required />

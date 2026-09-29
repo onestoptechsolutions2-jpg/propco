@@ -137,7 +137,8 @@ model Property {
   owner   Owner  @relation(fields: [ownerId], references: [id])
   ownerId String
 
-  units Unit[]
+  units     Unit[]
+  schedules MaintenanceSchedule[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -332,7 +333,8 @@ model Supplier {
   payoutMethod String?
   mpesaNumber  String?
 
-  requests MaintenanceRequest[]
+  requests  MaintenanceRequest[]
+  schedules MaintenanceSchedule[]
   notifyChannel NotifyChannel @default(EMAIL)
 
   createdAt DateTime @default(now())
@@ -502,6 +504,7 @@ model MeterReading {
   status          BillStatus @default(UNPAID)
   paidDate        DateTime?
   notes           String?
+  alert           String? // unusual-usage flag, e.g. "2.4x higher than usual"
 
   meter   UtilityMeter @relation(fields: [meterId], references: [id], onDelete: Cascade)
   meterId String
@@ -579,4 +582,31 @@ model PaymentProof {
 
   @@unique([orgId, code])
   @@index([orgId, status])
+}
+
+// ---------- Preventive maintenance calendar ----------
+
+// A recurring job on a property (tank cleaning, fire extinguishers, generator
+// service...). "Mark done" rolls nextDue forward by intervalMonths.
+model MaintenanceSchedule {
+  id             String    @id @default(cuid())
+  title          String
+  intervalMonths Int
+  nextDue        DateTime
+  lastDone       DateTime?
+  estimatedCost  Decimal?  @db.Decimal(10, 2)
+  notes          String?
+  active         Boolean   @default(true)
+
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  propertyId String
+
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  supplierId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([propertyId])
+  @@index([nextDue])
 }

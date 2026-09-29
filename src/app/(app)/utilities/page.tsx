@@ -29,7 +29,7 @@ export default async function UtilitiesPage({
   const { recorded } = await searchParams;
   const scope = ownerScopeFilter(user);
 
-  const [properties, bills] = await Promise.all([
+  const [properties, bills, alerts] = await Promise.all([
     prisma.property.findMany({
       where: scope,
       orderBy: { name: "asc" },
@@ -52,6 +52,16 @@ export default async function UtilitiesPage({
         lease: { include: { tenant: true } },
       },
       orderBy: { readingDate: "asc" },
+    }),
+    prisma.meterReading.findMany({
+      where: {
+        alert: { not: null },
+        readingDate: { gte: new Date(new Date().getTime() - 60 * 86_400_000) },
+        meter: { unit: { property: scope } },
+      },
+      include: { meter: { include: { unit: { include: { property: true } } } }, lease: { include: { tenant: true } } },
+      orderBy: { readingDate: "desc" },
+      take: 20,
     }),
   ]);
 
@@ -86,6 +96,23 @@ export default async function UtilitiesPage({
         <p className="mt-4 rounded border border-accent/30 bg-accent-light px-3 py-2 text-sm text-ink">
           Readings saved. {Number(recorded)} bill{Number(recorded) === 1 ? "" : "s"} created and tenants notified.
         </p>
+      )}
+
+      {alerts.length > 0 && (
+        <div className="mt-6 rounded-lg border border-danger/30 bg-danger/5 p-4">
+          <h2 className="font-serif text-lg text-danger">Unusual usage ({alerts.length})</h2>
+          <ul className="mt-2 flex flex-col gap-2 text-sm">
+            {alerts.map((a) => (
+              <li key={a.id}>
+                <span className="font-medium text-foreground">
+                  {a.meter.unit.property.name} · {a.meter.unit.label} · {TYPE_LABEL[a.meter.type]}
+                </span>
+                <span className="text-muted"> ({a.readingDate.toISOString().slice(0, 10)}): </span>
+                {a.alert}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <h2 className="mt-8 font-serif text-xl text-ink">

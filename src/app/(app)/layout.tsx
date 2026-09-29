@@ -19,6 +19,7 @@ const NAV: Group[] = [
   {
     items: [
       { href: "/dashboard", label: "Home" },
+      { href: "/insights", label: "Insights", hint: "How you are performing" },
       { href: "/guide", label: "Step-by-step guides", hint: "Not sure where to start?" },
     ],
   },
@@ -51,6 +52,7 @@ const NAV: Group[] = [
     title: "Repairs",
     items: [
       { href: "/maintenance", label: "Repair requests" },
+      { href: "/maintenance/schedule", label: "Preventive calendar", hint: "Recurring jobs", roles: MANAGERS },
       { href: "/suppliers", label: "Suppliers", roles: MANAGERS },
     ],
   },
@@ -76,7 +78,17 @@ export default async function AppLayout({
   const isStaff = user.role === "ADMIN" || user.role === "STAFF";
 
   // WhatsApp messages waiting for a person to tap "Send".
-  const proofsWaiting = await prisma.paymentProof.count({ where: { orgId: user.orgId, status: "PENDING" } });
+  const jobsOverdue =
+    user.role === "OWNER"
+      ? 0
+      : await prisma.maintenanceSchedule.count({
+          where: {
+            active: true,
+            nextDue: { lt: new Date() },
+            property: user.role === "LANDLORD" ? { orgId: user.orgId, ownerId: user.ownerId ?? "__none__" } : { orgId: user.orgId },
+          },
+        });
+  const proofsWaiting =await prisma.paymentProof.count({ where: { orgId: user.orgId, status: "PENDING" } });
   const whatsappWaiting = isStaff
     ? await prisma.notification.count({ where: { orgId: user.orgId, channel: "WHATSAPP", status: "QUEUED" } })
     : 0;
@@ -99,7 +111,13 @@ export default async function AppLayout({
         label,
         hint,
         badge:
-          href === "/notifications" ? whatsappWaiting : href === "/rent/confirm" ? proofsWaiting : undefined,
+          href === "/notifications"
+            ? whatsappWaiting
+            : href === "/rent/confirm"
+              ? proofsWaiting
+              : href === "/maintenance/schedule"
+                ? jobsOverdue
+                : undefined,
       })),
   })).filter((g) => g.items.length > 0);
 

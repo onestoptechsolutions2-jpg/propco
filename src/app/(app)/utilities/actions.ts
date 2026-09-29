@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole, ownerScopeFilter } from "@/lib/access";
 import { assertPremium } from "@/lib/lease-access";
 import { notifyUtilityBill } from "@/lib/notify-events";
+import { detectUsageAlert } from "@/lib/usage-alerts";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -68,7 +69,7 @@ export async function recordReadings(formData: FormData) {
     where: { active: true, unit: { propertyId, property: ownerScopeFilter(user) } },
     include: {
       unit: { include: { leases: { where: { status: "ACTIVE" }, take: 1 } } },
-      readings: { orderBy: [{ readingDate: "desc" }, { createdAt: "desc" }], take: 1 },
+      readings: { orderBy: [{ readingDate: "desc" }, { createdAt: "desc" }], take: 4 },
     },
   });
 
@@ -110,6 +111,14 @@ export async function recordReadings(formData: FormData) {
     const prev = previous ?? reading;
     const consumption = baseline ? 0 : reading - prev;
     const amount = baseline ? 0 : round2(consumption * Number(meter.rate));
+    const alert = baseline
+      ? null
+      : detectUsageAlert({
+          consumption,
+          previous: meter.readings.filter((r) => r.notes !== "Opening reading").map((r) => Number(r.consumption)),
+          occupied: leaseId !== null,
+          type: meter.type,
+        });
 
     const r = await prisma.meterReading.create({
       data: {
@@ -123,6 +132,7 @@ export async function recordReadings(formData: FormData) {
         status: baseline ? "PAID" : "UNPAID",
         paidDate: baseline ? readingDate : null,
         notes: baseline ? "Opening reading" : null,
+        alert,
       },
     });
     if (!baseline) billed.push(r.id);

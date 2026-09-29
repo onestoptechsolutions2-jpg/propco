@@ -72,6 +72,60 @@ async function flagLatePayments() {
   }
 }
 
+/**
+ * Smart rent reminders, one message per stage per payment:
+ *  - 3 days before the due date, and on the due date (PENDING rent)
+ *  - 3 and 7 days after the due date (still unpaid / LATE)
+ * Tone escalates from friendly to firm. dedupeKey keeps each stage to one send.
+ */
+async function sendRentReminders() {
+  const now = new Date();
+  const dayMs = 24 * 60 * 60 * 1000;
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const open = await prisma.payment.findMany({
+    where: { status: { in: ["PENDING", "LATE"] }, dueDate: { lte: new Date(startOfToday.getTime() + 3 * dayMs) } },
+    include: { lease: { include: { tenant: true, unit: { include: { property: true } } } } },
+  });
+
+  for (const p of open) {
+    if (p.lease.status !== "ACTIVE") continue;
+    const daysToDue = Math.round((p.dueDate.getTime() - startOfToday.getTime()) / dayMs);
+    const where = `${p.lease.unit.property.name} · ${p.lease.unit.label}`;
+    const amount = `KES ${Number(p.amount).toLocaleString("en-US")}`;
+
+    let stage: string | null = null;
+    let subject = "";
+    let body = "";
+    if (daysToDue === 3) {
+      stage = "soon";
+      subject = "Rent due in 3 days";
+      body = `Friendly reminder: your rent of ${amount} for ${where} is due in 3 days.`;
+    } else if (daysToDue === 0) {
+      stage = "today";
+      subject = "Rent due today";
+      body = `Your rent of ${amount} for ${where} is due today. Thank you for paying on time.`;
+    } else if (daysToDue <= -7) {
+      stage = "late7";
+      subject = "Rent seriously overdue";
+      body = `Your rent of ${amount} for ${where} is now over 7 days late. Please pay today or contact us to agree a plan.`;
+    } else if (daysToDue <= -3) {
+      stage = "late3";
+      subject = "Rent overdue";
+      body = `Your rent of ${amount} for ${where} is 3 days overdue. Please pay as soon as possible.`;
+    }
+    if (!stage) continue;
+
+    await notify(prisma, {
+      event: "RENT_REMINDER",
+      to: p.lease.tenant,
+      subject,
+      body,
+      dedupeKey: `RENT_REMINDER:${p.id}:${stage}`,
+    });
+  }
+}
+
 /** Tell owners (and the tenant) about active leases ending within 60 days. */
 async function notifyExpiringLeases() {
   const now = new Date();
@@ -141,6 +195,7 @@ async function runDailyJob(): Promise<boolean> {
   try {
     await generateMonthlyPayments();
     await flagLatePayments();
+    await sendRentReminders();
     await notifyExpiringLeases();
     await notifySubscriptionExpiry();
     console.log("[worker] daily job finished");
