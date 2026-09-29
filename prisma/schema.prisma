@@ -430,6 +430,8 @@ model Organization {
   trialEndsAt DateTime
   paidUntil   DateTime?
   billingNote String?
+  // Shown on tenant invoices: till/paybill, account name, bank details.
+  payInstructions String?
 
   users         User[]
   owners        Owner[]

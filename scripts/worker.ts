@@ -100,12 +100,49 @@ async function notifyExpiringLeases() {
   }
 }
 
+/**
+ * Retention: tell each company's admins when their trial or paid plan is about
+ * to end (3 days before the trial, 5 days before a paid plan) so they can pay
+ * in time. One message per admin per end date.
+ */
+async function notifySubscriptionExpiry() {
+  const now = new Date();
+  const day = 24 * 60 * 60 * 1000;
+  const orgs = await prisma.organization.findMany({
+    where: {
+      OR: [
+        { trialEndsAt: { gt: now, lte: new Date(now.getTime() + 3 * day) } },
+        { paidUntil: { gt: now, lte: new Date(now.getTime() + 5 * day) } },
+      ],
+    },
+    include: { users: { where: { role: "ADMIN", email: { not: null } } } },
+  });
+
+  for (const org of orgs) {
+    const paidEnding = !!org.paidUntil && org.paidUntil > now && org.paidUntil <= new Date(now.getTime() + 5 * day);
+    const ends = paidEnding ? org.paidUntil! : org.trialEndsAt;
+    const endStr = ends.toISOString().slice(0, 10);
+    for (const u of org.users) {
+      await notify(prisma, {
+        event: "SUBSCRIPTION_EXPIRING",
+        to: { orgId: org.id, name: u.name ?? u.email ?? "Admin", email: u.email, phone: null, notifyChannel: "EMAIL" },
+        subject: paidEnding ? "Your PropCo plan ends soon" : "Your PropCo free trial ends soon",
+        body: paidEnding
+          ? `Your plan for ${org.name} ends on ${endStr}. Open Plan & billing, pay by M-Pesa and share the proof to keep everything running.`
+          : `Your free trial for ${org.name} ends on ${endStr}. After that the free plan covers 5 units and utilities and move-in/out are switched off. Open Plan & billing to choose a plan.`,
+        dedupeKey: `SUBSCRIPTION_EXPIRING:${org.id}:${endStr}:${u.id}`,
+      });
+    }
+  }
+}
+
 async function runDailyJob(): Promise<boolean> {
   console.log(`[worker] daily job starting at ${new Date().toISOString()}`);
   try {
     await generateMonthlyPayments();
     await flagLatePayments();
     await notifyExpiringLeases();
+    await notifySubscriptionExpiry();
     console.log("[worker] daily job finished");
     return true;
   } catch (error) {

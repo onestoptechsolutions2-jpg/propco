@@ -82,7 +82,12 @@ tenant by phone, and become a Paid rent payment on approval. A code can never be
 used twice. Subscription customers do the same on `/billing`; you activate their
 plan from `/platform`. No Daraja credentials are needed.
 
-Later phases (invoicing, payroll,
+**Receipts and invoices:** every paid rent row has a printable *Receipt*; each
+lease has an *Invoice / statement* of unpaid rent and utility bills with the
+company's "how to pay" text (set under My team > Company details). Both can be
+printed/saved as PDF or sent on WhatsApp.
+
+Later phases (payroll, payroll,
 documents, reporting, analytics) build on this foundation without changing
 what's here.
 

@@ -47,7 +47,14 @@ export default async function LeasePaymentsPage({
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_320px]">
         <div>
-          <h2 className="font-serif text-lg text-ink">Payment history</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="font-serif text-lg text-ink">Payment history</h2>
+            {canRecord && (
+              <a href={`/rent/${lease.id}/invoice`} className="text-sm font-medium text-accent hover:underline">
+                Invoice / statement
+              </a>
+            )}
+          </div>
           <div className="mt-4 overflow-hidden rounded-lg border border-border bg-surface">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[560px] text-left text-sm">
@@ -78,6 +85,14 @@ export default async function LeasePaymentsPage({
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
+                        {payment.status === "PAID" && (
+                          <a
+                            href={`/rent/${lease.id}/receipt/${payment.id}`}
+                            className="text-accent hover:underline"
+                          >
+                            Receipt
+                          </a>
+                        )}
                         {canRecord && payment.status !== "PAID" && (
                           <form
                             action={async () => {

@@ -34,6 +34,22 @@ async function addMember(formData: FormData) {
   redirect("/team?added=1");
 }
 
+async function saveCompany(formData: FormData) {
+  "use server";
+  const user = await requireRole("ADMIN");
+  const name = String(formData.get("name") ?? "").trim();
+  if (name.length < 2) redirect("/team");
+  await prisma.organization.update({
+    where: { id: user.orgId },
+    data: {
+      name,
+      payInstructions: String(formData.get("payInstructions") ?? "").trim().slice(0, 500) || null,
+    },
+  });
+  revalidatePath("/team");
+  redirect("/team?saved=1");
+}
+
 async function removeMember(userId: string) {
   "use server";
   const user = await requireRole("ADMIN");
@@ -45,10 +61,11 @@ async function removeMember(userId: string) {
 export default async function TeamPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; added?: string }>;
+  searchParams: Promise<{ error?: string; added?: string; saved?: string }>;
 }) {
   const user = await requireRole("ADMIN");
-  const { error, added } = await searchParams;
+  const { error, added, saved } = await searchParams;
+  const org = await prisma.organization.findUniqueOrThrow({ where: { id: user.orgId } });
   const members = await prisma.user.findMany({
     where: { orgId: user.orgId, role: { in: ["ADMIN", "STAFF"] } },
     orderBy: { createdAt: "asc" },
@@ -60,6 +77,23 @@ export default async function TeamPage({
       <p className="mt-1 text-sm text-muted">
         Add colleagues so they can sign in and help. Give them the email and password you set here.
       </p>
+
+      <form action={saveCompany} className="mt-6 flex flex-col gap-3 rounded-lg border border-border bg-surface p-5">
+        <h2 className="font-serif text-lg text-ink">Company details</h2>
+        <p className="text-xs text-muted">Shown at the top of receipts, invoices and statements.</p>
+        <input name="name" defaultValue={org.name} required className="rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink" />
+        <textarea
+          name="payInstructions"
+          rows={3}
+          defaultValue={org.payInstructions ?? ""}
+          placeholder="How tenants should pay, e.g. M-Pesa Paybill 123456, account: your unit number"
+          className="rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink"
+        />
+        <button className="self-start rounded bg-ink px-5 py-2.5 text-sm font-medium text-white hover:bg-ink-light">
+          Save company details
+        </button>
+        {saved && <p className="text-xs text-accent">Saved.</p>}
+      </form>
 
       {error && (
         <p className="mt-4 rounded border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p>
