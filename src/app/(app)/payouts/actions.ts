@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/access";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { notifyPayoutSent } from "@/lib/notify-events";
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -17,6 +18,8 @@ const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Expected YYYY-M
  * owner's AGENCY_MANAGED properties only (self-managed landlords collect
  * their own rent, so there's nothing for the agency to pay out).
  * Commission is applied per property at that property's commissionPct.
+ * Maintenance = actualCost of requests completed (DONE) in the month on
+ * those properties, deducted from the net.
  *
  * Safe to re-run: a PENDING payout is recalculated, a PAID one is left
  * untouched, and owners with no collected rent that month are skipped.
@@ -39,6 +42,9 @@ export async function generatePayouts(formData: FormData) {
         include: {
           units: {
             include: {
+              maintenanceRequests: {
+                where: { status: "DONE", completedAt: { gte: periodStart, lte: periodEnd } },
+              },
               leases: {
                 include: {
                   payments: {
@@ -56,10 +62,14 @@ export async function generatePayouts(formData: FormData) {
   for (const owner of owners) {
     let gross = 0;
     let commission = 0;
+    let maintenance = 0;
 
     for (const property of owner.properties) {
       let propertyGross = 0;
       for (const unit of property.units) {
+        for (const req of unit.maintenanceRequests) {
+          maintenance += Number(req.actualCost ?? 0);
+        }
         for (const lease of unit.leases) {
           for (const payment of lease.payments) {
             propertyGross += Number(payment.amount);
@@ -72,8 +82,9 @@ export async function generatePayouts(formData: FormData) {
 
     gross = round2(gross);
     commission = round2(commission);
-    if (gross === 0) continue;
-    const netAmount = round2(gross - commission);
+    maintenance = round2(maintenance);
+    if (gross === 0 && maintenance === 0) continue;
+    const netAmount = round2(gross - commission - maintenance);
 
     const key = { ownerId_periodStart: { ownerId: owner.id, periodStart } };
     const existing = await prisma.payout.findUnique({ where: key });
@@ -87,9 +98,10 @@ export async function generatePayouts(formData: FormData) {
         periodEnd,
         grossRent: gross,
         commission,
+        maintenance,
         netAmount,
       },
-      update: { periodEnd, grossRent: gross, commission, netAmount },
+      update: { periodEnd, grossRent: gross, commission, maintenance, netAmount },
     });
   }
 
@@ -119,6 +131,8 @@ export async function markPayoutPaid(payoutId: string, formData: FormData) {
       paidDate: new Date(),
     },
   });
+
+  await notifyPayoutSent(payout.id);
 
   revalidatePath("/payouts");
   const month = payout.periodStart.toISOString().slice(0, 7);

@@ -36,9 +36,10 @@ export default async function PayoutsPage({
     (acc, p) => ({
       gross: acc.gross + Number(p.grossRent),
       commission: acc.commission + Number(p.commission),
+      maintenance: acc.maintenance + Number(p.maintenance),
       net: acc.net + Number(p.netAmount),
     }),
-    { gross: 0, commission: 0, net: 0 }
+    { gross: 0, commission: 0, maintenance: 0, net: 0 }
   );
 
   const monthLabel = new Date(Date.UTC(year, mon - 1, 1)).toLocaleString("en-US", {
@@ -53,7 +54,7 @@ export default async function PayoutsPage({
         <div>
           <h1 className="font-serif text-3xl text-ink">Owner payouts</h1>
           <p className="mt-1 text-sm text-muted">
-            {monthLabel} · rent collected less agency commission
+            {monthLabel} · rent collected less commission and maintenance
           </p>
         </div>
 
@@ -97,6 +98,7 @@ export default async function PayoutsPage({
                 <th className="px-4 py-3">Owner</th>
                 <th className="px-4 py-3 text-right">Rent collected</th>
                 <th className="px-4 py-3 text-right">Commission</th>
+                <th className="px-4 py-3 text-right">Maintenance</th>
                 <th className="px-4 py-3 text-right">Net payout (KES)</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3"></th>
@@ -108,6 +110,7 @@ export default async function PayoutsPage({
                   <td className="px-4 py-3 font-medium text-foreground">{payout.owner.name}</td>
                   <td className="px-4 py-3 text-right text-foreground">{fmt(payout.grossRent)}</td>
                   <td className="px-4 py-3 text-right text-foreground">{fmt(payout.commission)}</td>
+                  <td className="px-4 py-3 text-right text-foreground">{fmt(payout.maintenance)}</td>
                   <td className="px-4 py-3 text-right font-medium text-ink">{fmt(payout.netAmount)}</td>
                   <td className="px-4 py-3">
                     {payout.status === "PAID" ? (
@@ -155,7 +158,7 @@ export default async function PayoutsPage({
               ))}
               {payouts.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted">
+                  <td colSpan={7} className="px-4 py-8 text-center text-sm text-muted">
                     No payouts for {monthLabel}
                     {isStaff ? " yet — generate them above once rent has been marked paid." : "."}
                   </td>
@@ -168,6 +171,7 @@ export default async function PayoutsPage({
                   <td className="px-4 py-3 text-muted">Total</td>
                   <td className="px-4 py-3 text-right">{fmt(totals.gross)}</td>
                   <td className="px-4 py-3 text-right">{fmt(totals.commission)}</td>
+                  <td className="px-4 py-3 text-right">{fmt(totals.maintenance)}</td>
                   <td className="px-4 py-3 text-right text-ink">{fmt(totals.net)}</td>
                   <td colSpan={2}></td>
                 </tr>

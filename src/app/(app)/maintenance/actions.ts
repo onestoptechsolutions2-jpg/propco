@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser, requireRole, canManageOwnerRecords } from "@/lib/access";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { notifyMaintenanceAssigned, notifyMaintenanceResolved } from "@/lib/notify-events";
 
 async function assertCanManageUnit(unitId: string) {
   const user = await requireUser();
@@ -72,6 +73,7 @@ export async function assignSupplier(requestId: string, formData: FormData) {
       costEstimate: parsed.costEstimate,
     },
   });
+  await notifyMaintenanceAssigned(requestId);
 
   revalidatePath("/maintenance");
   revalidatePath(`/maintenance/${requestId}`);
@@ -121,6 +123,7 @@ export async function completeRequest(requestId: string, formData: FormData) {
     where: { id: requestId },
     data: { status: "DONE", actualCost: parsed.actualCost, completedAt: new Date() },
   });
+  await notifyMaintenanceResolved(requestId);
 
   revalidatePath("/maintenance");
   revalidatePath(`/maintenance/${requestId}`);

@@ -10,6 +10,7 @@ const tenantSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email().optional().or(z.literal("")),
   phone: z.string().optional(),
+  notifyChannel: z.enum(["EMAIL", "SMS", "WHATSAPP"]).optional(),
 });
 
 export async function createTenant(formData: FormData) {
@@ -19,6 +20,7 @@ export async function createTenant(formData: FormData) {
     name: formData.get("name"),
     email: formData.get("email") || undefined,
     phone: formData.get("phone") || undefined,
+    notifyChannel: formData.get("notifyChannel") || undefined,
   });
 
   const tenant = await prisma.tenant.create({
@@ -36,6 +38,7 @@ export async function updateTenant(tenantId: string, formData: FormData) {
     name: formData.get("name"),
     email: formData.get("email") || undefined,
     phone: formData.get("phone") || undefined,
+    notifyChannel: formData.get("notifyChannel") || undefined,
   });
 
   await prisma.tenant.update({

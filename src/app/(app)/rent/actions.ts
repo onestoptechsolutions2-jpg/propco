@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser, canManageOwnerRecords } from "@/lib/access";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { notifyPaymentReceived } from "@/lib/notify-events";
 
 const paymentSchema = z.object({
   amount: z.coerce.number().nonnegative(),
@@ -37,7 +38,7 @@ export async function recordPayment(leaseId: string, formData: FormData) {
     notes: formData.get("notes") || undefined,
   });
 
-  await prisma.payment.create({
+  const created = await prisma.payment.create({
     data: {
       leaseId,
       amount: parsed.amount,
@@ -49,6 +50,8 @@ export async function recordPayment(leaseId: string, formData: FormData) {
       notes: parsed.notes,
     },
   });
+
+  await notifyPaymentReceived(created.id);
 
   revalidatePath("/rent");
   revalidatePath(`/rent/${leaseId}`);
@@ -70,6 +73,7 @@ export async function markPaymentPaid(leaseId: string, paymentId: string) {
     where: { id: paymentId },
     data: { status: "PAID", paidDate: new Date() },
   });
+  await notifyPaymentReceived(paymentId);
 
   revalidatePath("/rent");
   revalidatePath(`/rent/${leaseId}`);

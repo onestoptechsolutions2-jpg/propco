@@ -25,6 +25,18 @@ export default async function EditOwnerPage({
         <Field label="Full name" name="name" defaultValue={owner.name} required />
         <Field label="Email" name="email" type="email" defaultValue={owner.email ?? ""} />
         <Field label="Phone" name="phone" defaultValue={owner.phone ?? ""} />
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted">Notify via</label>
+          <select
+            name="notifyChannel"
+            defaultValue={owner.notifyChannel}
+            className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink"
+          >
+            <option value="EMAIL">Email</option>
+            <option value="SMS">SMS</option>
+            <option value="WHATSAPP">WhatsApp</option>
+          </select>
+        </div>
         <Field label="M-Pesa number" name="mpesaNumber" defaultValue={owner.mpesaNumber ?? ""} />
         <div>
           <label className="mb-1 block text-xs font-medium text-muted">Preferred payout method</label>

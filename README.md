@@ -30,11 +30,20 @@ contractors by trade (plumber, electrician, carpenter, painter, general).
 `/maintenance` — log a request against a unit, assign it to a supplier with
 a cost estimate, track it through in-progress to done with an actual cost.
 Owners get a read-only view scoped to their own properties; staff/landlords
-can log, assign, and close requests. **Not yet wired up:** maintenance
-costs aren't deducted from owner payouts yet — `/payouts` still only
-computes gross rent minus commission (see "What's next").
+can log, assign, and close requests. Maintenance costs (DONE jobs completed in the month) are deducted from owner
+payouts, and `/supplier-payments` lets staff mark completed jobs as paid to
+the supplier (manual entry; no live M-Pesa B2C).
 
-Later phases (maintenance/suppliers, invoicing, payroll,
+**Phase 5** (done, delivery needs provider keys): notifications. Events — payment
+received (owner), payout sent (owner), rent late (tenant), lease expiring in
+60 days (owner + tenant), maintenance assigned (supplier), maintenance done
+(owner + tenant), supplier paid — are queued in a `Notification` table and
+delivered by the worker every minute via each recipient's preferred channel
+(set on their edit page). Email uses Resend and SMS uses Africa's Talking
+(see `.env.example`); WhatsApp isn't wired up. With no keys, messages show as
+*Skipped* on `/notifications`.
+
+Later phases (invoicing, payroll,
 documents, reporting, analytics) build on this foundation without changing
 what's here.
 
@@ -140,15 +149,6 @@ the platform spec doc).
   (`/api/mpesa/callback`) that Safaricom calls back with the result —
   which would then create/update a `Payment` row automatically instead of
   a staff member entering it by hand.
-- **Maintenance costs into payouts**: `/payouts` generation should subtract
-  that month's `MaintenanceRequest.actualCost` (for `DONE` requests on the
-  owner's properties) from the gross before applying commission — not done
-  yet, so a payout currently overstates the owner's net if there was paid
-  maintenance work that month.
-- **Supplier payments**: track and mark suppliers as paid for completed
-  jobs — `MaintenanceRequest.actualCost` is recorded but nothing pays the
-  supplier or marks that payment done yet, same pattern as `/payouts`,
-  just for suppliers instead of owners.
 - After that: invoicing, payroll, documents & contracts, reporting, and
   analytics — see `property-management-platform-spec.md` for the full
   module list and build-phase order.
