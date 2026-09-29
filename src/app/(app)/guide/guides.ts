@@ -275,6 +275,70 @@ const utilities: Guide = {
   ],
 };
 
+const vacancy: Guide = {
+  id: "vacancy",
+  title: "Fill a vacant unit",
+  summary: "Make a shareable page and post it on WhatsApp.",
+  steps: [
+    {
+      id: "phone",
+      title: "Set your WhatsApp number",
+      why: "Enquiries from the page go to this number.",
+      how: ["Open “Vacancy pages”.", "Type your WhatsApp number in the yellow box and press Save."],
+      href: "/listings",
+      cta: "Open vacancy pages",
+    },
+    {
+      id: "page",
+      title: "Describe the unit and add photos",
+      why: "A clear description and a few photos get many more calls.",
+      how: ["Write a short description and the amenities.", "Paste photo links (one per line).", "Tick “Show this page publicly” and Save."],
+      href: "/listings",
+      cta: "Edit a listing",
+    },
+    {
+      id: "share",
+      title: "Share the link",
+      why: "Anyone can open it on their phone, no sign-in needed.",
+      how: ["Press “Share on WhatsApp” and pick your groups or status.", "Copy the link for Facebook or a To Let sign.", "Take the page down when the unit is let."],
+      href: "/listings",
+      cta: "Share a listing",
+    },
+  ],
+};
+
+const stays: Guide = {
+  id: "stays",
+  title: "Run a homestay or BnB",
+  summary: "Bookings, guest door codes and cleaning between guests.",
+  steps: [
+    {
+      id: "enable",
+      title: "Turn on short stays for a unit",
+      why: "This tells PropCo to price the unit per night and take bookings.",
+      how: ["Open “Short stays”.", "Choose the unit at the bottom, type the nightly price, and press Turn on."],
+      href: "/stays",
+      cta: "Open short stays",
+    },
+    {
+      id: "book",
+      title: "Add a booking",
+      why: "PropCo blocks double bookings and works out the total.",
+      how: ["Fill in the guest, dates and price.", "Leave “Create a door code” ticked.", "Save, then press “Send welcome on WhatsApp”."],
+      href: "/stays",
+      cta: "Add a booking",
+    },
+    {
+      id: "turnover",
+      title: "Check in, check out, clean",
+      why: "The guest's code is cancelled at check-out and the unit is flagged for cleaning.",
+      how: ["Press Check in when they arrive and Check out when they leave.", "After cleaning, press “Mark cleaned”."],
+      href: "/stays",
+      cta: "Open short stays",
+    },
+  ],
+};
+
 const whatsapp: Guide = {
   id: "whatsapp",
   title: "Send messages on WhatsApp",
@@ -333,6 +397,6 @@ const ownerGuide: Guide = {
 
 export function guidesForRole(role: string): Guide[] {
   if (role === "OWNER") return [ownerGuide];
-  if (role === "LANDLORD") return [setupLandlord, rent, utilities, moveInOut, repair, whatsapp];
-  return [setupStaff, rent, utilities, moveInOut, payouts, repair, whatsapp];
+  if (role === "LANDLORD") return [setupLandlord, rent, utilities, moveInOut, vacancy, stays, repair, whatsapp];
+  return [setupStaff, rent, utilities, moveInOut, vacancy, stays, payouts, repair, whatsapp];
 }

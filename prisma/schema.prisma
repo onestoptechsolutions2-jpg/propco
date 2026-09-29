@@ -160,12 +160,22 @@ model Unit {
   rentAmount   Decimal    @db.Decimal(10, 2)
   status       UnitStatus @default(VACANT)
 
+  // Public vacancy page (/v/<id>) and short-stay (homestay / BnB) settings.
+  listed       Boolean  @default(false)
+  listingText  String?
+  amenities    String? // comma separated: "WiFi, Parking, Balcony"
+  photoUrls    String? // one link per line
+  stayType     StayType @default(LONG_TERM)
+  nightlyRate  Decimal? @db.Decimal(10, 2)
+
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   propertyId String
 
   leases Lease[]
   maintenanceRequests MaintenanceRequest[]
   meters              UtilityMeter[]
+  accessCodes         AccessCode[]
+  bookings            Booking[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -434,6 +444,8 @@ model Organization {
   billingNote String?
   // Shown on tenant invoices: till/paybill, account name, bank details.
   payInstructions String?
+  // WhatsApp number that vacancy-page enquiries and guest messages go to.
+  contactPhone    String?
 
   users         User[]
   owners        Owner[]
@@ -609,4 +621,63 @@ model MaintenanceSchedule {
 
   @@index([propertyId])
   @@index([nextDue])
+}
+
+// ---------- Smart-lock access codes and short-stay bookings ----------
+
+enum StayType {
+  LONG_TERM
+  SHORT_STAY
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+}
+
+// A door/keypad code for a unit (tenant, caretaker, cleaner or guest). PropCo
+// tracks and shares the code and revokes it at move-out / check-out; the code
+// itself is programmed on the lock (or a lock provider) by a person for now.
+model AccessCode {
+  id        String    @id @default(cuid())
+  label     String // "Tenant", "Caretaker", "Cleaner", "Guest: Jane"
+  code      String
+  validFrom DateTime  @default(now())
+  validTo   DateTime?
+  active    Boolean   @default(true)
+  bookingId String?
+
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  unitId String
+
+  createdAt DateTime @default(now())
+
+  @@index([unitId])
+  @@index([bookingId])
+}
+
+model Booking {
+  id          String        @id @default(cuid())
+  guestName   String
+  guestPhone  String?
+  guestEmail  String?
+  guests      Int           @default(1)
+  checkIn     DateTime
+  checkOut    DateTime
+  nightlyRate Decimal       @db.Decimal(10, 2)
+  total       Decimal       @db.Decimal(12, 2)
+  paid        Decimal       @default(0) @db.Decimal(12, 2)
+  status      BookingStatus @default(CONFIRMED)
+  source      String        @default("Direct") // Airbnb, Booking.com, Direct...
+  notes       String?
+  cleaned     Boolean       @default(true)
+
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  unitId String
+
+  createdAt DateTime @default(now())
+
+  @@index([unitId, checkIn])
 }

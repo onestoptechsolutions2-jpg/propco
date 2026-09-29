@@ -87,6 +87,16 @@ lease has an *Invoice / statement* of unpaid rent and utility bills with the
 company's "how to pay" text (set under My team > Company details). Both can be
 printed/saved as PDF or sent on WhatsApp.
 
+**Smart-property extras:** `/insights` (occupancy, collection, repair spend,
+who is behind); unusual-usage alerts on water/power readings; a preventive
+maintenance calendar (`/maintenance/schedule`); staged rent reminders (3 days
+before, due day, +3, +7); a tenant rent-reliability score and printable payment
+reference; public vacancy pages (`/v/<unit id>`, "Enquire on WhatsApp", set your
+number under `/listings`); door-code tracking (`/access`, cancelled at move-out
+or check-out; the code is set on the lock by a person, no lock API yet); and
+short stays for homestays/BnBs (`/stays`: bookings without double-booking,
+guest door codes, welcome message, turnover cleaning, occupancy and revenue).
+
 Later phases (payroll, payroll,
 documents, reporting, analytics) build on this foundation without changing
 what's here.

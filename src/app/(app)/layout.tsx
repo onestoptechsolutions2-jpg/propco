@@ -33,6 +33,14 @@ const NAV: Group[] = [
     ],
   },
   {
+    title: "Vacancies & stays",
+    items: [
+      { href: "/listings", label: "Vacancy pages", hint: "Fill empty units faster", roles: MANAGERS },
+      { href: "/stays", label: "Short stays", hint: "Homestay / BnB bookings", roles: MANAGERS },
+      { href: "/access", label: "Door codes", hint: "Smart lock and keypad codes", roles: MANAGERS },
+    ],
+  },
+  {
     title: "Money in",
     items: [
       { href: "/rent", label: "Collect rent", roles: MANAGERS },

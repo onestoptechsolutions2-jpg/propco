@@ -140,6 +140,11 @@ export async function completeMoveOut(leaseId: string, formData: FormData) {
         },
       });
     }
+    // The tenant's door codes stop working the moment they hand the unit back.
+    await tx.accessCode.updateMany({
+      where: { unitId: lease.unitId, active: true, bookingId: null },
+      data: { active: false, validTo: now },
+    });
     await tx.unit.update({
       where: { id: lease.unitId },
       data: { status: needsRepairs ? "MAINTENANCE" : "VACANT" },
