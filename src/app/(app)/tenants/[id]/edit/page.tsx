@@ -37,6 +37,9 @@ export default async function EditTenantPage({
         <Field label="Full name" name="name" defaultValue={tenant.name} required />
         <Field label="Email" name="email" type="email" defaultValue={tenant.email ?? ""} />
         <Field label="Phone" name="phone" defaultValue={tenant.phone ?? ""} />
+        <Field label="ID / passport number" name="idNumber" defaultValue={tenant.idNumber ?? ""} />
+        <Field label="Emergency contact name" name="emergencyName" defaultValue={tenant.emergencyName ?? ""} />
+        <Field label="Emergency contact phone" name="emergencyPhone" defaultValue={tenant.emergencyPhone ?? ""} />
         <div>
           <label className="mb-1 block text-xs font-medium text-muted">Notify via</label>
           <select
@@ -63,7 +66,10 @@ export default async function EditTenantPage({
         {activeLease ? (
           <p className="mt-2 text-sm text-foreground">
             Currently leased at {activeLease.unit.property.name} · {activeLease.unit.label}, since{" "}
-            {activeLease.startDate.toLocaleDateString()}.
+            {activeLease.startDate.toLocaleDateString()}.{" "}
+            <a href={`/leases/${activeLease.id}`} className="font-medium text-accent hover:underline">
+              Move-in checklist and move-out
+            </a>
           </p>
         ) : (
           <>

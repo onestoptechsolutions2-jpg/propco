@@ -94,3 +94,45 @@ export async function notifySupplierPaid(requestId: string) {
     dedupeKey: `SUPPLIER_PAID:${r.id}`,
   });
 }
+
+/** Tenant: a utility bill was recorded against their lease. */
+export async function notifyUtilityBill(readingId: string) {
+  const r = await prisma.meterReading.findUnique({
+    where: { id: readingId },
+    include: { meter: { include: { unit: { include: { property: true } } } }, lease: { include: { tenant: true } } },
+  });
+  if (!r?.lease || Number(r.amount) <= 0) return;
+  const kind = r.meter.type.charAt(0) + r.meter.type.slice(1).toLowerCase();
+  const detail =
+    r.meter.mode === "METERED"
+      ? `${Number(r.consumption)} ${r.meter.unitName} used (${Number(r.previousReading)} to ${Number(r.reading)})`
+      : "monthly fee";
+  await notify(prisma, {
+    event: "UTILITY_BILL",
+    to: r.lease.tenant,
+    subject: `${kind} bill`,
+    body: `${kind} for ${r.meter.unit.property.name} · ${r.meter.unit.label}: ${detail}. Amount due: ${kes(r.amount)}.`,
+    dedupeKey: `UTILITY_BILL:${r.id}`,
+  });
+}
+
+/** Tenant: move-out settlement summary. */
+export async function notifySettlement(leaseId: string) {
+  const l = await prisma.lease.findUnique({
+    where: { id: leaseId },
+    include: { tenant: true, unit: { include: { property: true } } },
+  });
+  if (!l || !l.depositSettledAt) return;
+  const refund = Number(l.depositRefund ?? 0);
+  await notify(prisma, {
+    event: "MOVE_OUT_SETTLED",
+    to: l.tenant,
+    subject: "Move-out completed",
+    body:
+      `Your move-out from ${l.unit.property.name} · ${l.unit.label} is complete. ` +
+      (refund >= 0
+        ? `Deposit refund: ${kes(refund)} (after deductions of ${kes(l.depositDeductions)}).`
+        : `Deductions of ${kes(l.depositDeductions)} exceed your deposit; balance due: ${kes(-refund)}.`),
+    dedupeKey: `MOVE_OUT_SETTLED:${l.id}`,
+  });
+}

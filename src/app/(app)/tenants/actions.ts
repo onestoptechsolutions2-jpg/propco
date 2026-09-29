@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { orgHasPremium } from "@/lib/lease-access";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -11,6 +12,9 @@ const tenantSchema = z.object({
   email: z.string().email().optional().or(z.literal("")),
   phone: z.string().optional(),
   notifyChannel: z.enum(["EMAIL", "SMS", "WHATSAPP"]).optional(),
+  idNumber: z.string().optional(),
+  emergencyName: z.string().optional(),
+  emergencyPhone: z.string().optional(),
 });
 
 export async function createTenant(formData: FormData) {
@@ -21,6 +25,9 @@ export async function createTenant(formData: FormData) {
     email: formData.get("email") || undefined,
     phone: formData.get("phone") || undefined,
     notifyChannel: formData.get("notifyChannel") || undefined,
+    idNumber: formData.get("idNumber") || undefined,
+    emergencyName: formData.get("emergencyName") || undefined,
+    emergencyPhone: formData.get("emergencyPhone") || undefined,
   });
 
   const tenant = await prisma.tenant.create({
@@ -39,6 +46,9 @@ export async function updateTenant(tenantId: string, formData: FormData) {
     email: formData.get("email") || undefined,
     phone: formData.get("phone") || undefined,
     notifyChannel: formData.get("notifyChannel") || undefined,
+    idNumber: formData.get("idNumber") || undefined,
+    emergencyName: formData.get("emergencyName") || undefined,
+    emergencyPhone: formData.get("emergencyPhone") || undefined,
   });
 
   await prisma.tenant.update({
@@ -84,7 +94,7 @@ export async function createLease(formData: FormData) {
   ]);
   if (!tenant || !unit) throw new Error("You don't have permission to create this lease.");
 
-  await prisma.$transaction([
+  const [createdLease] = await prisma.$transaction([
     prisma.lease.create({
       data: {
         unitId: parsed.unitId,
@@ -98,5 +108,6 @@ export async function createLease(formData: FormData) {
   ]);
 
   revalidatePath("/tenants");
-  redirect("/tenants");
+  // Straight into onboarding: the move-in checklist for this new lease.
+  redirect((await orgHasPremium(user.orgId)) ? `/leases/${createdLease.id}` : "/tenants");
 }

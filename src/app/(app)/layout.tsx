@@ -28,11 +28,15 @@ const NAV: Group[] = [
       { href: "/properties", label: "Properties & units" },
       { href: "/owners", label: "Owners", roles: STAFF },
       { href: "/tenants", label: "Tenants", roles: MANAGERS },
+      { href: "/leases", label: "Move in & out", hint: "Onboarding and clearing a unit", roles: MANAGERS },
     ],
   },
   {
     title: "Money in",
-    items: [{ href: "/rent", label: "Collect rent", roles: MANAGERS }],
+    items: [
+      { href: "/rent", label: "Collect rent", roles: MANAGERS },
+      { href: "/utilities", label: "Water, power & internet", roles: MANAGERS },
+    ],
   },
   {
     title: "Money out",

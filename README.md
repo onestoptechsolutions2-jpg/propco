@@ -66,6 +66,15 @@ unlimited company by migration `20260107000000_multi_tenancy`.
 breakdown (rent received per unit, commission, repairs, net) with a
 "Print / Save as PDF" button. Owners see their own; no PDF library needed.
 
+**Utilities, move-in and move-out** (paid plans / trial): `/utilities` -
+meters per unit (water, electricity, gas, internet), metered or flat-fee,
+bulk "record readings" for a property, automatic tenant bills with a
+message, unpaid-bill list with WhatsApp reminders. `/leases` - a move-in
+checklist (tasks plus unit condition), and a move-out checklist that reuses
+the move-in inventory, prices damage, adds unpaid utilities and rent, settles
+the deposit, ends the lease, frees the unit (or opens a repair request), and
+prints a clearance certificate. New leases open straight into onboarding.
+
 Later phases (invoicing, payroll,
 documents, reporting, analytics) build on this foundation without changing
 what's here.

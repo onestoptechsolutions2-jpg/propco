@@ -45,6 +45,18 @@ export default async function NewTenantPage() {
             className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink"
           />
         </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted">ID / passport number</label>
+          <input name="idNumber" defaultValue={undefined} className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted">Emergency contact name</label>
+          <input name="emergencyName" defaultValue={undefined} className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted">Emergency contact phone</label>
+          <input name="emergencyPhone" defaultValue={undefined} className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink" />
+        </div>
         <button
           type="submit"
           className="mt-2 self-start rounded bg-ink px-5 py-2.5 text-sm font-medium text-white transition hover:bg-ink-light"

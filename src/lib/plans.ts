@@ -48,3 +48,9 @@ export function isPlatformAdmin(email?: string | null) {
     .filter(Boolean)
     .includes(email.toLowerCase());
 }
+
+/** Paid-only features (utilities billing, move-in/out): open during the trial and on any active paid plan. */
+export function hasPremium(org: OrgBilling, now = new Date()) {
+  const s = orgStatus(org, now);
+  return s.inTrial || s.subscribed;
+}

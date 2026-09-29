@@ -203,6 +203,70 @@ const repair: Guide = {
   ],
 };
 
+const moveInOut: Guide = {
+  id: "moveinout",
+  title: "Move a tenant in and out",
+  summary: "Onboard a new tenant, and clear the unit properly when they leave.",
+  steps: [
+    {
+      id: "movein",
+      title: "Move-in checklist",
+      why: "Record the paperwork and the condition of the unit when the tenant arrives. This protects you and them later.",
+      how: ["Open “Move in & out” and choose the tenant.", "Press “Start move-in checklist”.", "Tick each task and mark each item Good, Fair or Damaged.", "Save, then press “Mark move-in complete”."],
+      href: "/leases",
+      cta: "Open move in & out",
+    },
+    {
+      id: "opening",
+      title: "Record opening meter readings",
+      why: "So the new tenant is only billed for what they use.",
+      how: ["Open “Water, power & internet” and press “Record readings”.", "Choose “Opening readings for a new tenant”.", "Type each meter's reading and save."],
+      href: "/utilities/readings",
+      cta: "Record opening readings",
+    },
+    {
+      id: "moveout",
+      title: "Move-out and clearing the unit",
+      why: "Inspect, charge for any damage, settle the deposit, and free the unit for the next tenant.",
+      how: ["Open the tenant and press “Start move-out”.", "Record final meter readings first (Utilities).", "Mark the condition of each item and type a charge for any damage.", "Check the deposit settlement, then press “Complete move-out and clear unit”.", "Print the clearance certificate for the tenant to sign."],
+      href: "/leases",
+      cta: "Open move in & out",
+    },
+  ],
+};
+
+const utilities: Guide = {
+  id: "utilities",
+  title: "Bill water, electricity and internet",
+  summary: "Set up meters once, then record readings each month.",
+  steps: [
+    {
+      id: "meter",
+      title: "Add a meter or service",
+      why: "Tell PropCo what each unit pays for and at what rate.",
+      how: ["Press “Add a meter”.", "Choose the unit and what it is (water, electricity, internet).", "Pick By meter reading (rate per unit) or Flat monthly fee.", "Type the rate and save."],
+      href: "/utilities/meters/new",
+      cta: "Add a meter",
+    },
+    {
+      id: "read",
+      title: "Record the monthly readings",
+      why: "Walk the property, type each meter's reading and save. Tenants are billed and told by message.",
+      how: ["Open “Record readings” and choose the property.", "Type each current reading. Leave a meter blank to skip it.", "Save. Bills are created automatically."],
+      href: "/utilities/readings",
+      cta: "Record readings",
+    },
+    {
+      id: "collect",
+      title: "Collect what is owed",
+      why: "Unpaid bills stay on the Utilities page until you mark them paid.",
+      how: ["Open “Water, power & internet”.", "Use “Remind on WhatsApp” for late payers.", "Press “Mark paid” when the money arrives."],
+      href: "/utilities",
+      cta: "Open utilities",
+    },
+  ],
+};
+
 const whatsapp: Guide = {
   id: "whatsapp",
   title: "Send messages on WhatsApp",
@@ -261,6 +325,6 @@ const ownerGuide: Guide = {
 
 export function guidesForRole(role: string): Guide[] {
   if (role === "OWNER") return [ownerGuide];
-  if (role === "LANDLORD") return [setupLandlord, rent, repair, whatsapp];
-  return [setupStaff, rent, payouts, repair, whatsapp];
+  if (role === "LANDLORD") return [setupLandlord, rent, utilities, moveInOut, repair, whatsapp];
+  return [setupStaff, rent, utilities, moveInOut, payouts, repair, whatsapp];
 }
