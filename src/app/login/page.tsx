@@ -40,6 +40,9 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
   const callbackUrl = params.callbackUrl ?? "/dashboard";
+  // Only offer Google when credentials are configured; otherwise Google itself
+  // shows "invalid_client" after the redirect.
+  const googleEnabled = !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -59,6 +62,8 @@ export default async function LoginPage({
           </p>
         )}
 
+        {googleEnabled && (
+          <>
         <form action={googleSignIn} className="mt-6">
           <input type="hidden" name="callbackUrl" value={callbackUrl} />
           <button
@@ -75,6 +80,8 @@ export default async function LoginPage({
           or
           <span className="h-px flex-1 bg-border" />
         </div>
+          </>
+        )}
 
         <form action={credentialsSignIn} className="flex flex-col gap-3">
           <input type="hidden" name="callbackUrl" value={callbackUrl} />
