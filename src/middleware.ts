@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 
 // Routes anyone can hit without being signed in.
 // "/v/" = public vacancy pages.
-const PUBLIC_PATHS = ["/login", "/signup", "/api/auth", "/v/"];
+// /api/photos checks access itself (public only for listed units).
+const PUBLIC_PATHS = ["/login", "/signup", "/api/auth", "/v/", "/api/photos/"];
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;

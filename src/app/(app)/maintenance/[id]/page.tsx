@@ -3,6 +3,8 @@ import Link from "next/link";
 import { requireUser, canManageOwnerRecords } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { assignSupplier, setStatus, completeRequest } from "../actions";
+import { PhotoUploader } from "@/components/PhotoUploader";
+import { uploadPhoto, deletePhoto } from "@/lib/photo-actions";
 
 const STATUS_STYLES: Record<string, string> = {
   OPEN: "bg-danger/10 text-danger",
@@ -29,6 +31,12 @@ export default async function MaintenanceRequestPage({
   const canManage = canManageOwnerRecords(user, request.unit.property.ownerId, request.unit.property.orgId);
   if (!canManage && user.role !== "OWNER") notFound();
   if (user.role === "OWNER" && user.ownerId !== request.unit.property.ownerId) notFound();
+
+  const photos = await prisma.photo.findMany({
+    where: { requestId: request.id },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
 
   const suppliers = canManage ? await prisma.supplier.findMany({ where: { orgId: user.orgId }, orderBy: { name: "asc" } }) : [];
 
@@ -65,6 +73,34 @@ export default async function MaintenanceRequestPage({
             {request.actualCost ? `KES ${Number(request.actualCost).toLocaleString()}` : "—"}
           </p>
         </div>
+      </div>
+
+      <div className="mt-8 border-t border-border pt-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-serif text-lg text-ink">Photos</h2>
+          {canManage && <PhotoUploader upload={uploadPhoto.bind(null, "request", request.id)} />}
+        </div>
+        {photos.length === 0 ? (
+          <p className="mt-2 text-sm text-muted">
+            No photos yet.{canManage ? " Take a photo of the problem, and another when it is fixed." : ""}
+          </p>
+        ) : (
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {photos.map((ph) => (
+              <div key={ph.id} className="relative">
+                <a href={`/api/photos/${ph.id}`} target="_blank">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/api/photos/${ph.id}`} alt="Repair" className="h-32 w-full rounded-lg object-cover" />
+                </a>
+                {canManage && (
+                  <form action={deletePhoto.bind(null, ph.id)} className="absolute right-1 top-1">
+                    <button className="rounded bg-black/60 px-2 py-0.5 text-xs text-white hover:bg-black/80">Remove</button>
+                  </form>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {canManage && request.status !== "DONE" && request.status !== "CANCELLED" && (

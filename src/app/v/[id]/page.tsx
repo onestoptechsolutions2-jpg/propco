@@ -6,7 +6,10 @@ import { whatsappLink } from "@/lib/whatsapp";
 async function getUnit(id: string) {
   const unit = await prisma.unit.findFirst({
     where: { id, listed: true, OR: [{ status: "VACANT" }, { stayType: "SHORT_STAY" }] },
-    include: { property: { include: { org: true } } },
+    include: {
+      property: { include: { org: true } },
+      photos: { select: { id: true }, orderBy: { createdAt: "asc" } },
+    },
   });
   return unit;
 }
@@ -31,7 +34,10 @@ export default async function VacancyPage({ params }: { params: Promise<{ id: st
   const price = shortStay
     ? `KES ${Number(u.nightlyRate).toLocaleString()} / night`
     : `KES ${Number(u.rentAmount).toLocaleString()} / month`;
-  const photos = (u.photoUrls ?? "").split("\n").filter(Boolean);
+  const photos = [
+    ...u.photos.map((p) => `/api/photos/${p.id}`),
+    ...(u.photoUrls ?? "").split("\n").filter(Boolean),
+  ];
   const amenities = (u.amenities ?? "").split(",").map((a) => a.trim()).filter(Boolean);
   const wa = whatsappLink(
     u.property.org.contactPhone,

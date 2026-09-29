@@ -2,6 +2,8 @@ import { headers } from "next/headers";
 import { requireRole, ownerScopeFilter } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { saveListing, saveContactPhone } from "./actions";
+import { PhotoUploader } from "@/components/PhotoUploader";
+import { uploadPhoto, deletePhoto } from "@/lib/photo-actions";
 
 const input = "w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink";
 
@@ -19,7 +21,7 @@ export default async function ListingsPage() {
         property: ownerScopeFilter(user),
         OR: [{ status: "VACANT" }, { listed: true }, { stayType: "SHORT_STAY" }],
       },
-      include: { property: true },
+      include: { property: true, photos: { select: { id: true }, orderBy: { createdAt: "asc" } } },
       orderBy: [{ property: { name: "asc" } }, { label: "asc" }],
     }),
   ]);
@@ -50,7 +52,22 @@ export default async function ListingsPage() {
           const price = u.stayType === "SHORT_STAY" && u.nightlyRate ? `KES ${Number(u.nightlyRate).toLocaleString()} a night` : `KES ${Number(u.rentAmount).toLocaleString()} a month`;
           const share = `https://wa.me/?text=${encodeURIComponent(`${u.bedrooms ? u.bedrooms + " bedroom " : ""}to let at ${u.property.name}${u.property.city ? ", " + u.property.city : ""}. ${price}. See photos and enquire: ${url}`)}`;
           return (
-            <form key={u.id} action={saveListing.bind(null, u.id)} className="rounded-lg border border-border bg-surface p-5">
+            <div key={u.id} className="rounded-lg border border-border bg-surface p-5">
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                {u.photos.map((ph) => (
+                  <div key={ph.id} className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/api/photos/${ph.id}`} alt="" className="h-16 w-20 rounded object-cover" />
+                    <form action={deletePhoto.bind(null, ph.id)} className="absolute right-0.5 top-0.5">
+                      <button className="rounded bg-black/60 px-1.5 text-xs leading-5 text-white" aria-label="Remove photo">
+                        ×
+                      </button>
+                    </form>
+                  </div>
+                ))}
+                <PhotoUploader upload={uploadPhoto.bind(null, "unit", u.id)} label="Add photo" />
+              </div>
+              <form action={saveListing.bind(null, u.id)}>
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="font-medium text-foreground">
@@ -98,7 +115,8 @@ export default async function ListingsPage() {
                   </>
                 )}
               </div>
-            </form>
+              </form>
+            </div>
           );
         })}
         {units.length === 0 && (
