@@ -91,7 +91,7 @@ const setupLandlord: Guide = {
 const rent: Guide = {
   id: "rent",
   title: "Collect this month's rent",
-  summary: "Record who has paid and follow up on those who have not.",
+  summary: "Confirm M-Pesa proofs, record other payments, and follow up on late rent.",
   steps: [
     {
       id: "open",
@@ -100,6 +100,14 @@ const rent: Guide = {
       how: ["Open “Collect rent”.", "Late rows are flagged automatically every night."],
       href: "/rent",
       cta: "Open rent",
+    },
+    {
+      id: "confirm",
+      title: "Confirm M-Pesa payments",
+      why: "Tenants pay your till or paybill and forward you the M-Pesa message. You check it and approve it; nothing is charged automatically.",
+      how: ["Open “Confirm M-Pesa”.", "Paste the message the tenant sent you.", "Check the tenant, amount and code we read from it.", "Press “Approve payment”. The rent list updates and the owner is told."],
+      href: "/rent/confirm",
+      cta: "Confirm payments",
     },
     {
       id: "record",

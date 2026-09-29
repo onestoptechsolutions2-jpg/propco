@@ -75,6 +75,13 @@ the move-in inventory, prices damage, adds unpaid utilities and rent, settles
 the deposit, ends the lease, frees the unit (or opens a repair request), and
 prints a clearance certificate. New leases open straight into onboarding.
 
+**M-Pesa is manual by design (proof of payment):** tenants pay the agency's
+till/paybill and forward the confirmation SMS. Staff paste it into
+`/rent/confirm`; the code, amount and payer are read automatically, matched to a
+tenant by phone, and become a Paid rent payment on approval. A code can never be
+used twice. Subscription customers do the same on `/billing`; you activate their
+plan from `/platform`. No Daraja credentials are needed.
+
 Later phases (invoicing, payroll,
 documents, reporting, analytics) build on this foundation without changing
 what's here.

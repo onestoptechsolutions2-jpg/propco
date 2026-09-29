@@ -437,6 +437,7 @@ model Organization {
   tenants       Tenant[]
   suppliers     Supplier[]
   notifications Notification[]
+  proofs        PaymentProof[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -543,4 +544,37 @@ model ChecklistItem {
   checklistId String
 
   @@index([checklistId])
+}
+
+// ---------- Manual M-Pesa: proof of payment ----------
+
+enum ProofStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// A tenant pays the agency's till/paybill by M-Pesa and forwards the
+// confirmation SMS. Staff paste it in; it is read automatically, matched to a
+// tenant, and becomes a rent payment only when staff approve it.
+model PaymentProof {
+  id         String      @id @default(cuid())
+  rawMessage String      @db.Text
+  code       String? // M-Pesa transaction code, unique per company (blocks reuse)
+  amount     Decimal?    @db.Decimal(12, 2)
+  payerName  String?
+  payerPhone String?
+  status     ProofStatus @default(PENDING)
+  reviewNote String?
+  leaseId    String?
+  paymentId  String?
+
+  org   Organization @relation(fields: [orgId], references: [id])
+  orgId String
+
+  createdAt  DateTime  @default(now())
+  reviewedAt DateTime?
+
+  @@unique([orgId, code])
+  @@index([orgId, status])
 }

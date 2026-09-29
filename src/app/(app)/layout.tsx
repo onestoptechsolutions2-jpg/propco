@@ -35,6 +35,7 @@ const NAV: Group[] = [
     title: "Money in",
     items: [
       { href: "/rent", label: "Collect rent", roles: MANAGERS },
+      { href: "/rent/confirm", label: "Confirm M-Pesa", hint: "Tenants share proof of payment", roles: MANAGERS },
       { href: "/utilities", label: "Water, power & internet", roles: MANAGERS },
     ],
   },
@@ -75,6 +76,7 @@ export default async function AppLayout({
   const isStaff = user.role === "ADMIN" || user.role === "STAFF";
 
   // WhatsApp messages waiting for a person to tap "Send".
+  const proofsWaiting = await prisma.paymentProof.count({ where: { orgId: user.orgId, status: "PENDING" } });
   const whatsappWaiting = isStaff
     ? await prisma.notification.count({ where: { orgId: user.orgId, channel: "WHATSAPP", status: "QUEUED" } })
     : 0;
@@ -96,7 +98,8 @@ export default async function AppLayout({
         href,
         label,
         hint,
-        badge: href === "/notifications" ? whatsappWaiting : undefined,
+        badge:
+          href === "/notifications" ? whatsappWaiting : href === "/rent/confirm" ? proofsWaiting : undefined,
       })),
   })).filter((g) => g.items.length > 0);
 

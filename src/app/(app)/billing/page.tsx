@@ -17,7 +17,21 @@ async function requestUpgrade(plan: Plan) {
   redirect("/billing");
 }
 
-export default async function BillingPage() {
+async function sharePaymentProof(formData: FormData) {
+  "use server";
+  const user = await requireRole("ADMIN");
+  const text = String(formData.get("proof") ?? "").trim().slice(0, 600);
+  if (text.length < 10) redirect("/billing");
+  await prisma.organization.update({
+    where: { id: user.orgId },
+    data: { billingNote: `Payment proof shared ${new Date().toISOString().slice(0, 10)}: ${text}` },
+  });
+  revalidatePath("/billing");
+  redirect("/billing?shared=1");
+}
+
+export default async function BillingPage({ searchParams }: { searchParams: Promise<{ shared?: string }> }) {
+  const { shared } = await searchParams;
   const user = await requireRole("ADMIN");
   const org = await prisma.organization.findUniqueOrThrow({ where: { id: user.orgId } });
   const units = await prisma.unit.count({ where: { property: { orgId: org.id } } });
@@ -112,6 +126,35 @@ export default async function BillingPage() {
           <li>We switch your plan on, usually within a few hours. You&apos;ll see the new limit here.</li>
         </ol>
         {org.billingNote && <p className="mt-3 text-xs text-muted">Last request: {org.billingNote}</p>}
+
+        <form action={sharePaymentProof} className="mt-5 border-t border-ink/10 pt-4">
+          <p className="font-medium">Already paid? Share your proof of payment</p>
+          <textarea
+            name="proof"
+            required
+            rows={3}
+            placeholder="Paste the M-Pesa confirmation message here"
+            className="mt-2 w-full rounded border border-border bg-white px-3 py-2 text-sm outline-none focus:border-ink"
+          />
+          <button className="mt-2 rounded bg-ink px-4 py-2 text-xs font-medium text-white hover:bg-ink-light">
+            Send proof
+          </button>
+          {shared && <p className="mt-2 text-xs text-accent">Thank you. We will activate your plan once we confirm it.</p>}
+          {supportPhone && (
+            <p className="mt-2 text-xs text-muted">
+              You can also forward the M-Pesa message to us on WhatsApp{" "}
+              <a
+                className="text-accent hover:underline"
+                target="_blank"
+                rel="noopener"
+                href={whatsappLink(supportPhone, `Payment proof for ${org.name} (account ${org.id.slice(-8).toUpperCase()}):`) ?? "#"}
+              >
+                here
+              </a>
+              .
+            </p>
+          )}
+        </form>
       </div>
     </div>
   );

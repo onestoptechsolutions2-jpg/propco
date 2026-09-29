@@ -42,6 +42,12 @@ export default async function RentRollPage() {
   return (
     <div>
       <div>
+        <Link
+          href="/rent/confirm"
+          className="float-right rounded bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink-light"
+        >
+          Confirm M-Pesa payments
+        </Link>
         <h1 className="font-serif text-3xl text-ink">Rent roll</h1>
         <p className="mt-1 text-sm text-muted">
           {today.toLocaleString("en-US", { month: "long", year: "numeric" })} · {collected}/
