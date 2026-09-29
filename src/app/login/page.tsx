@@ -6,7 +6,14 @@ import Link from "next/link";
 async function googleSignIn(formData: FormData) {
   "use server";
   const callbackUrl = (formData.get("callbackUrl") as string) || "/dashboard";
-  await signIn("google", { redirectTo: callbackUrl });
+  try {
+    await signIn("google", { redirectTo: callbackUrl });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      redirect(`/login?error=${encodeURIComponent(error.type)}&callbackUrl=${encodeURIComponent(callbackUrl)}`);
+    }
+    throw error;
+  }
 }
 
 async function credentialsSignIn(formData: FormData) {
@@ -42,7 +49,13 @@ export default async function LoginPage({
 
         {params.error && (
           <p className="mt-4 rounded border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
-            That email or password didn&apos;t match. Try again.
+            {params.error === "CredentialsSignin"
+              ? "That email or password didn't match. Try again."
+              : params.error === "OAuthAccountNotLinked"
+                ? "That email is already registered. Sign in with your email and password instead."
+                : params.error === "Configuration" || params.error === "OAuthSignInError"
+                  ? "Google sign-in isn't set up correctly yet. Use email and password, or ask your admin to check the Google settings."
+                  : "Sign-in failed. Please try again."}
           </p>
         )}
 

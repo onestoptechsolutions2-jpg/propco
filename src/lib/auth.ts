@@ -26,6 +26,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      // Google verifies email ownership, so it is safe to attach a Google
+      // login to an existing account with the same email (e.g. one created
+      // by email/password or by a team invite). Without this, Auth.js throws
+      // OAuthAccountNotLinked.
+      allowDangerousEmailAccountLinking: true,
     }),
     Credentials({
       name: "Email and password",
