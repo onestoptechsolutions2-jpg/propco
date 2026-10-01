@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/access";
 import { signOut } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { AppNav, type NavGroup } from "@/components/AppNav";
+import { AppNav, type NavGroup, type QuickItem } from "@/components/AppNav";
 import { PwaSetup } from "@/components/PwaSetup";
 import Link from "next/link";
 import { PLANS, isPlatformAdmin, orgStatus } from "@/lib/plans";
@@ -113,6 +113,24 @@ export default async function AppLayout({
     ? [...NAV, { title: "Platform", items: [{ href: "/platform", label: "All companies" }, { href: "/platform/partners", label: "Service partners" }] }]
     : NAV;
 
+  // Phone bottom bar: four big buttons for the daily jobs, plus "More" for the rest.
+  const quick: QuickItem[] =
+    user.role === "OWNER"
+      ? [
+          { href: "/dashboard", label: "Home", icon: "home" },
+          { href: "/properties", label: "Properties", icon: "building" },
+          { href: "/payouts", label: "Payouts", icon: "wallet" },
+          { href: "/maintenance", label: "Repairs", icon: "wrench" },
+        ]
+      : [
+          { href: "/dashboard", label: "Home", icon: "home" },
+          { href: "/rent", label: "Rent", icon: "cash", badge: proofsWaiting },
+          { href: "/maintenance", label: "Repairs", icon: "wrench" },
+          isStaff
+            ? { href: "/notifications", label: "Messages", icon: "chat", badge: whatsappWaiting }
+            : { href: "/tenants", label: "Tenants", icon: "users" },
+        ];
+
   const groups: NavGroup[] = nav.map((g) => ({
     title: g.title,
     items: g.items
@@ -141,11 +159,13 @@ export default async function AppLayout({
     <div className="min-h-screen md:flex">
       <AppNav
         groups={groups}
+        quick={quick}
         userLabel={user.name ?? user.email ?? ""}
         roleLabel={user.role.toLowerCase()}
         signOutAction={doSignOut}
       />
-      <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8 md:px-10 md:py-10 print:p-0">
+      {/* pb-28 on phones keeps the last content clear of the fixed bottom bar */}
+      <main className="min-w-0 flex-1 px-4 py-6 pb-28 sm:px-6 sm:py-8 md:px-10 md:py-10 md:pb-10 print:p-0">
         <PwaSetup />
         {user.role === "ADMIN" && (status.inTrial || overLimit || status.lapsed) && (
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-accent-light px-4 py-3 text-sm text-ink print:hidden">
