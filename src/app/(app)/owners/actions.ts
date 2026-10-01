@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -17,7 +17,7 @@ const ownerSchema = z.object({
 });
 
 export async function createOwner(formData: FormData) {
-  const user = await requireRole("STAFF");
+  const user = await requirePermission("owners.manage");
 
   const parsed = ownerSchema.parse({
     name: formData.get("name"),
@@ -38,7 +38,7 @@ export async function createOwner(formData: FormData) {
 }
 
 export async function updateOwner(ownerId: string, formData: FormData) {
-  const user = await requireRole("STAFF");
+  const user = await requirePermission("owners.manage");
 
   const parsed = ownerSchema.parse({
     name: formData.get("name"),
@@ -61,7 +61,7 @@ export async function updateOwner(ownerId: string, formData: FormData) {
 }
 
 export async function deleteOwner(ownerId: string) {
-  const user = await requireRole("STAFF");
+  const user = await requirePermission("owners.manage");
   await prisma.owner.delete({ where: { id: ownerId, orgId: user.orgId } });
   revalidatePath("/owners");
   redirect("/owners");

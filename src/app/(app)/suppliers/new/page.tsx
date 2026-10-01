@@ -1,8 +1,8 @@
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { createSupplier } from "../actions";
 
 export default async function NewSupplierPage() {
-  await requireRole("STAFF", "LANDLORD");
+  await requirePermission("suppliers.manage");
 
   return (
     <div className="max-w-lg">

@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 
 export default async function OwnersPage() {
-  const user = await requireRole("STAFF");
+  const user = await requirePermission("owners.manage");
 
   const owners = await prisma.owner.findMany({
     where: { orgId: user.orgId },

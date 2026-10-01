@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 
 export default async function TenantsPage() {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("tenants.manage");
 
   const tenants = await prisma.tenant.findMany({
     where: { orgId: user.orgId },

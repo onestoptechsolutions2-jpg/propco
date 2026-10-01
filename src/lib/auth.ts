@@ -5,6 +5,10 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
+import { audit } from "@/lib/audit";
+
+const MAX_FAILED_LOGINS = 5;
+const LOCKOUT_MINUTES = 15;
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -45,9 +49,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user?.passwordHash) return null;
+        // Suspended people and locked accounts cannot sign in.
+        if (!user.active) return null;
+        if (user.lockedUntil && user.lockedUntil > new Date()) return null;
 
         const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) return null;
+        if (!valid) {
+          // Brute-force protection: 5 wrong passwords in a row lock the account for 15 minutes.
+          const failed = user.failedLogins + 1;
+          const lock = failed >= MAX_FAILED_LOGINS;
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              failedLogins: lock ? 0 : failed,
+              lockedUntil: lock ? new Date(Date.now() + LOCKOUT_MINUTES * 60_000) : user.lockedUntil,
+            },
+          });
+          if (lock && user.orgId) {
+            await audit({ id: user.id, name: user.name, email: user.email, orgId: user.orgId }, "login.locked", `Too many wrong passwords for ${user.email}`);
+          }
+          return null;
+        }
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { failedLogins: 0, lockedUntil: null, lastLoginAt: new Date() },
+        });
 
         return {
           id: user.id,

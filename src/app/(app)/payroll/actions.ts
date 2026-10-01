@@ -2,10 +2,11 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { assertPremium } from "@/lib/lease-access";
 import { computePayslip } from "@/lib/payroll";
 import { notifyPayslip } from "@/lib/notify-events";
+import { audit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -45,7 +46,7 @@ function parseEmployee(formData: FormData) {
 }
 
 export async function addEmployee(formData: FormData) {
-  const user = await requireRole("ADMIN");
+  const user = await requirePermission("payroll.manage");
   await assertPremium(user.orgId);
   const d = parseEmployee(formData);
   await prisma.employee.create({ data: { ...d, email: d.email || undefined, orgId: user.orgId } });
@@ -54,7 +55,7 @@ export async function addEmployee(formData: FormData) {
 }
 
 export async function updateEmployee(id: string, formData: FormData) {
-  const user = await requireRole("ADMIN");
+  const user = await requirePermission("payroll.manage");
   const d = parseEmployee(formData);
   await prisma.employee.update({
     where: { id, orgId: user.orgId },
@@ -71,7 +72,7 @@ const num = (v: FormDataEntryValue | null) => {
 
 /** Start a payroll run for a month: one draft payslip per active employee. */
 export async function createRun(formData: FormData) {
-  const user = await requireRole("ADMIN");
+  const user = await requirePermission("payroll.manage");
   await assertPremium(user.orgId);
   const month = String(formData.get("month") ?? "");
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) redirect("/payroll?error=" + encodeURIComponent("Choose a month."));
@@ -107,7 +108,7 @@ async function ownRun(user: { orgId: string }, runId: string) {
 
 /** Save bonuses / deductions typed on a draft run and recalculate every payslip. */
 export async function saveRun(runId: string, formData: FormData) {
-  const user = await requireRole("ADMIN");
+  const user = await requirePermission("payroll.manage");
   const run = await ownRun(user, runId);
   if (run.status !== "DRAFT") throw new Error("Only a draft run can be edited.");
 
@@ -131,10 +132,11 @@ export async function saveRun(runId: string, formData: FormData) {
 
 /** Lock the run and tell each employee their payslip is ready. */
 export async function approveRun(runId: string) {
-  const user = await requireRole("ADMIN");
+  const user = await requirePermission("payroll.manage");
   const run = await ownRun(user, runId);
   if (run.status !== "DRAFT") return;
   await prisma.payrollRun.update({ where: { id: runId }, data: { status: "APPROVED", approvedAt: new Date() } });
+  await audit(user, "payroll.approved", run.period.toISOString().slice(0, 7));
   const slips = await prisma.payslip.findMany({ where: { runId }, select: { id: true } });
   for (const s of slips) await notifyPayslip(s.id);
   revalidatePath(`/payroll/${runId}`);
@@ -142,7 +144,7 @@ export async function approveRun(runId: string) {
 }
 
 export async function deleteRun(runId: string) {
-  const user = await requireRole("ADMIN");
+  const user = await requirePermission("payroll.manage");
   const run = await ownRun(user, runId);
   if (run.status !== "DRAFT") throw new Error("Only a draft run can be deleted.");
   await prisma.payrollRun.delete({ where: { id: runId } });
@@ -151,7 +153,7 @@ export async function deleteRun(runId: string) {
 }
 
 export async function markPayslipPaid(payslipId: string, formData: FormData) {
-  const user = await requireRole("ADMIN");
+  const user = await requirePermission("payroll.manage");
   const slip = await prisma.payslip.findFirst({
     where: { id: payslipId, run: { orgId: user.orgId, status: { in: ["APPROVED", "PAID"] } } },
   });
@@ -165,6 +167,7 @@ export async function markPayslipPaid(payslipId: string, formData: FormData) {
       payRef: String(formData.get("reference") ?? "").trim() || null,
     },
   });
+  await audit(user, "payroll.paid", `payslip ${payslipId}`);
   const unpaid = await prisma.payslip.count({ where: { runId: slip.runId, paidAt: null } });
   if (unpaid === 0) await prisma.payrollRun.update({ where: { id: slip.runId }, data: { status: "PAID" } });
   revalidatePath(`/payroll/${slip.runId}`);

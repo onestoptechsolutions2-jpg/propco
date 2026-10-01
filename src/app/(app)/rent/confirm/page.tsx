@@ -1,4 +1,4 @@
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { phoneTail } from "@/lib/mpesa-parse";
 import { submitProof, approveProof, rejectProof } from "./actions";
@@ -12,7 +12,7 @@ export default async function ConfirmPaymentsPage({
 }: {
   searchParams: Promise<{ error?: string; added?: string; approved?: string }>;
 }) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("rent.manage");
   const { error, added, approved } = await searchParams;
 
   const [pending, recent, leases] = await Promise.all([

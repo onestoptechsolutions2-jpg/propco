@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { updateEmployee } from "../../actions";
 import { EmployeeFields } from "../../EmployeeFields";
 
 export default async function EditEmployeePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const user = await requireRole("ADMIN");
+  const user = await requirePermission("payroll.manage");
   const e = await prisma.employee.findFirst({ where: { id, orgId: user.orgId } });
   if (!e) notFound();
 

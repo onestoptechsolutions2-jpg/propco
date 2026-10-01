@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireUser, canManageOwnerRecords } from "@/lib/access";
+import { requirePermission, canManageOwnerRecords } from "@/lib/access";
 import { assertCanAddUnits } from "@/lib/plans";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -21,7 +21,7 @@ const propertySchema = z.object({
 });
 
 export async function createProperty(formData: FormData) {
-  const user = await requireUser();
+  const user = await requirePermission("properties.manage");
 
   const parsed = propertySchema.parse({
     name: formData.get("name"),
@@ -60,7 +60,7 @@ export async function createProperty(formData: FormData) {
 }
 
 export async function updateProperty(propertyId: string, formData: FormData) {
-  const user = await requireUser();
+  const user = await requirePermission("properties.manage");
   const existing = await prisma.property.findUniqueOrThrow({ where: { id: propertyId } });
 
   if (!canManageOwnerRecords(user, existing.ownerId, existing.orgId)) {
@@ -91,7 +91,7 @@ export async function updateProperty(propertyId: string, formData: FormData) {
 }
 
 export async function deleteProperty(propertyId: string) {
-  const user = await requireUser();
+  const user = await requirePermission("properties.manage");
   const existing = await prisma.property.findUniqueOrThrow({ where: { id: propertyId } });
 
   if (!canManageOwnerRecords(user, existing.ownerId, existing.orgId)) {
@@ -111,7 +111,7 @@ const unitSchema = z.object({
 });
 
 export async function createUnit(propertyId: string, formData: FormData) {
-  const user = await requireUser();
+  const user = await requirePermission("properties.manage");
   const property = await prisma.property.findUniqueOrThrow({ where: { id: propertyId } });
 
   if (!canManageOwnerRecords(user, property.ownerId, property.orgId)) {
@@ -137,7 +137,7 @@ export async function updateUnitStatus(
   unitId: string,
   status: "VACANT" | "OCCUPIED" | "MAINTENANCE"
 ) {
-  const user = await requireUser();
+  const user = await requirePermission("properties.manage");
   const property = await prisma.property.findUniqueOrThrow({ where: { id: propertyId } });
 
   if (!canManageOwnerRecords(user, property.ownerId, property.orgId)) {

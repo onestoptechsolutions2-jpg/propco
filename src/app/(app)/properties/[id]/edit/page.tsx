@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireUser, canManageOwnerRecords } from "@/lib/access";
+import { requirePermission, canManageOwnerRecords } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { updateProperty, deleteProperty } from "../../actions";
 
@@ -9,7 +9,7 @@ export default async function EditPropertyPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = await requireUser();
+  const user = await requirePermission("properties.manage");
 
   const [property, owners] = await Promise.all([
     prisma.property.findUnique({ where: { id } }),

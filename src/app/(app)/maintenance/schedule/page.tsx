@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { addSchedule, addTemplates, markScheduleDone, removeSchedule } from "./actions";
 
@@ -7,7 +7,7 @@ const input = "rounded border border-border px-3 py-2 text-sm outline-none focus
 const day = (d: Date) => d.toISOString().slice(0, 10);
 
 export default async function SchedulePage() {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("maintenance.manage");
   const scope = ownerScopeFilter(user);
 
   const [properties, suppliers, jobs] = await Promise.all([

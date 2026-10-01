@@ -1,42 +1,15 @@
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import bcrypt from "bcryptjs";
-import { z } from "zod";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
-
-const schema = z.object({
-  name: z.string().trim().min(2, "Enter a name"),
-  email: z.string().trim().toLowerCase().email("Enter a valid email"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  role: z.enum(["STAFF", "ADMIN"]),
-});
-
-async function addMember(formData: FormData) {
-  "use server";
-  const user = await requireRole("ADMIN");
-  const parsed = schema.safeParse({
-    name: formData.get("name"),
-    email: formData.get("email"),
-    password: formData.get("password"),
-    role: formData.get("role"),
-  });
-  if (!parsed.success) redirect(`/team?error=${encodeURIComponent(parsed.error.issues[0].message)}`);
-  const { name, email, password, role } = parsed.data;
-
-  if (await prisma.user.findUnique({ where: { email } })) {
-    redirect(`/team?error=${encodeURIComponent("That email already has an account.")}`);
-  }
-  await prisma.user.create({
-    data: { name, email, role, orgId: user.orgId, passwordHash: await bcrypt.hash(password, 10) },
-  });
-  revalidatePath("/team");
-  redirect("/team?added=1");
-}
+import { audit } from "@/lib/audit";
+import { TeamTabs } from "@/components/TeamTabs";
+import { addMember } from "./actions";
 
 async function saveCompany(formData: FormData) {
   "use server";
-  const user = await requireRole("ADMIN");
+  const user = await requirePermission("team.manage");
   const name = String(formData.get("name") ?? "").trim();
   if (name.length < 2) redirect("/team");
   await prisma.organization.update({
@@ -47,106 +20,103 @@ async function saveCompany(formData: FormData) {
       approvalLimit: Number(formData.get("approvalLimit")) > 0 ? Number(formData.get("approvalLimit")) : null,
     },
   });
+  await audit(user, "company.updated", name);
   revalidatePath("/team");
-  redirect("/team?saved=1");
+  redirect("/team?ok=" + encodeURIComponent("Company details saved."));
 }
 
-async function removeMember(userId: string) {
-  "use server";
-  const user = await requireRole("ADMIN");
-  if (userId === user.id) throw new Error("You can't remove yourself.");
-  await prisma.user.deleteMany({ where: { id: userId, orgId: user.orgId, role: { in: ["STAFF", "ADMIN"] } } });
-  revalidatePath("/team");
-}
+const input = "rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink";
 
-export default async function TeamPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string; added?: string; saved?: string }>;
-}) {
-  const user = await requireRole("ADMIN");
-  const { error, added, saved } = await searchParams;
-  const org = await prisma.organization.findUniqueOrThrow({ where: { id: user.orgId } });
-  const members = await prisma.user.findMany({
-    where: { orgId: user.orgId, role: { in: ["ADMIN", "STAFF"] } },
-    orderBy: { createdAt: "asc" },
-  });
+export default async function TeamPage({ searchParams }: { searchParams: Promise<{ error?: string; ok?: string }> }) {
+  const user = await requirePermission("team.manage");
+  const { error, ok } = await searchParams;
+
+  const [org, members, roles] = await Promise.all([
+    prisma.organization.findUniqueOrThrow({ where: { id: user.orgId } }),
+    prisma.user.findMany({
+      where: { orgId: user.orgId, role: { in: ["ADMIN", "STAFF"] } },
+      include: { orgRole: { select: { name: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.orgRole.findMany({ where: { orgId: user.orgId }, orderBy: { name: "asc" } }),
+  ]);
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="font-serif text-3xl text-ink">Your team</h1>
-      <p className="mt-1 text-sm text-muted">
-        Add colleagues so they can sign in and help. Give them the email and password you set here.
-      </p>
+    <div className="max-w-3xl">
+      <h1 className="font-serif text-3xl text-ink">Team and access</h1>
+      <p className="mt-1 text-sm text-muted">Who can sign in to {org.name}, and what each person is allowed to do.</p>
+      <TeamTabs active="people" />
 
-      <form action={saveCompany} className="mt-6 flex flex-col gap-3 rounded-lg border border-border bg-surface p-5">
-        <h2 className="font-serif text-lg text-ink">Company details</h2>
-        <p className="text-xs text-muted">Shown at the top of receipts, invoices and statements.</p>
-        <input name="name" defaultValue={org.name} required className="rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink" />
-        <textarea
-          name="payInstructions"
-          rows={3}
-          defaultValue={org.payInstructions ?? ""}
-          placeholder="How tenants should pay, e.g. M-Pesa Paybill 123456, account: your unit number"
-          className="rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink"
-        />
-        <div>
-          <label className="mb-1 block text-xs text-muted">
-            Supplier invoices above this amount (KES) need an admin to approve. Leave empty for no limit.
-          </label>
-          <input
-            name="approvalLimit"
-            type="number"
-            min={0}
-            defaultValue={org.approvalLimit ? Number(org.approvalLimit) : undefined}
-            className="w-48 rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink"
-          />
-        </div>
-        <button className="self-start rounded bg-ink px-5 py-2.5 text-sm font-medium text-white hover:bg-ink-light">
-          Save company details
-        </button>
-        {saved && <p className="text-xs text-accent">Saved.</p>}
-      </form>
-
-      {error && (
-        <p className="mt-4 rounded border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p>
-      )}
-      {added && (
-        <p className="mt-4 rounded border border-accent/30 bg-accent-light px-3 py-2 text-sm text-ink">
-          Team member added. Share their sign-in details with them.
-        </p>
-      )}
+      {error && <p className="mt-4 rounded border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p>}
+      {ok && <p className="mt-4 rounded border border-accent/30 bg-accent-light px-3 py-2 text-sm text-ink">{ok}</p>}
 
       <ul className="mt-6 divide-y divide-border rounded-lg border border-border bg-surface">
         {members.map((m) => (
-          <li key={m.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-            <div>
-              <p className="font-medium text-foreground">{m.name ?? m.email}</p>
-              <p className="text-xs text-muted">
-                {m.email} · {m.role === "ADMIN" ? "Admin" : "Staff"}
-              </p>
-            </div>
-            {m.id !== user.id && (
-              <form action={removeMember.bind(null, m.id)}>
-                <button className="text-xs text-danger hover:underline">Remove</button>
-              </form>
-            )}
+          <li key={m.id}>
+            <Link href={`/team/${m.id}`} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-background">
+              <div className="min-w-0">
+                <p className={`font-medium ${m.active ? "text-foreground" : "text-muted line-through"}`}>
+                  {m.name ?? m.email}
+                  {m.id === user.id && <span className="ml-2 text-xs font-normal text-muted">(you)</span>}
+                </p>
+                <p className="truncate text-xs text-muted">
+                  {m.email} · last sign-in {m.lastLoginAt ? m.lastLoginAt.toISOString().slice(0, 10) : "never"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                {!m.active && <span className="rounded-full bg-danger/10 px-2 py-1 font-medium text-danger">Suspended</span>}
+                {m.mustChangePassword && <span className="rounded-full bg-accent-light px-2 py-1 font-medium text-accent">Password not set</span>}
+                <span className="rounded-full bg-background px-2 py-1 font-medium text-ink">
+                  {m.orgRole?.name ?? (m.role === "ADMIN" ? "Admin" : "Staff")}
+                </span>
+              </div>
+            </Link>
           </li>
         ))}
       </ul>
 
       <h2 className="mt-8 font-serif text-xl text-ink">Add a team member</h2>
       <form action={addMember} className="mt-3 flex flex-col gap-3 rounded-lg border border-border bg-surface p-5">
-        <input name="name" placeholder="Full name" required className="rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink" />
-        <input name="email" type="email" placeholder="Email" required className="rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink" />
-        <input name="password" type="text" minLength={8} placeholder="Temporary password (8+ characters)" required className="rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink" />
-        <select name="role" defaultValue="STAFF" className="rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink">
-          <option value="STAFF">Staff — can manage day to day work</option>
-          <option value="ADMIN">Admin — can also manage billing and the team</option>
+        <input name="name" placeholder="Full name" required className={input} />
+        <input name="email" type="email" placeholder="Email" required className={input} />
+        <input name="password" type="text" minLength={8} placeholder="Temporary password (8+ characters)" required className={input} />
+        <select name="role" defaultValue="STAFF" className={input}>
+          {user.role === "ADMIN" && <option value="ADMIN">Admin: full access, including billing, payroll and team</option>}
+          <option value="STAFF">Staff: day-to-day work, no payroll, billing or team</option>
+          {roles.map((r) => (
+            <option key={r.id} value={`custom:${r.id}`}>
+              {r.name}: custom role
+            </option>
+          ))}
         </select>
-        <button className="self-start rounded bg-ink px-5 py-2.5 text-sm font-medium text-white hover:bg-ink-light">
-          Add team member
-        </button>
+        <p className="text-xs text-muted">
+          They sign in with this password and are asked to choose their own straight away.{" "}
+          <Link href="/team/roles" className="text-accent hover:underline">
+            Create a custom role
+          </Link>{" "}
+          for jobs like accountant or caretaker.
+        </p>
+        <button className="self-start rounded bg-ink px-5 py-2.5 text-sm font-medium text-white hover:bg-ink-light">Add team member</button>
+      </form>
+
+      <form action={saveCompany} className="mt-10 flex flex-col gap-3 rounded-lg border border-border bg-surface p-5">
+        <h2 className="font-serif text-lg text-ink">Company details</h2>
+        <p className="text-xs text-muted">Shown at the top of receipts, invoices and statements.</p>
+        <input name="name" defaultValue={org.name} required className={input} />
+        <textarea
+          name="payInstructions"
+          rows={3}
+          defaultValue={org.payInstructions ?? ""}
+          placeholder="How tenants should pay, e.g. M-Pesa Paybill 123456, account: your unit number"
+          className={input}
+        />
+        <div>
+          <label className="mb-1 block text-xs text-muted">
+            Supplier invoices above this amount (KES) need someone with the approval permission. Leave empty for no limit.
+          </label>
+          <input name="approvalLimit" type="number" min={0} defaultValue={org.approvalLimit ? Number(org.approvalLimit) : undefined} className={`${input} w-48`} />
+        </div>
+        <button className="self-start rounded bg-ink px-5 py-2.5 text-sm font-medium text-white hover:bg-ink-light">Save company details</button>
       </form>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter, type AccessUser } from "@/lib/access";
 import { assertPremium } from "@/lib/lease-access";
 import { generateCode } from "@/lib/access-codes";
 import { revalidatePath } from "next/cache";
@@ -12,20 +12,20 @@ import type { BookingStatus } from "@prisma/client";
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const back: (q?: string) => never = (q = "") => redirect(`/stays${q}`);
 
-async function ownUnit(user: Awaited<ReturnType<typeof requireRole>>, unitId: string) {
+async function ownUnit(user: AccessUser, unitId: string) {
   const unit = await prisma.unit.findFirst({ where: { id: unitId, property: ownerScopeFilter(user) } });
   if (!unit) throw new Error("You don't have permission for this unit.");
   return unit;
 }
 
-async function ownBooking(user: Awaited<ReturnType<typeof requireRole>>, id: string) {
+async function ownBooking(user: AccessUser, id: string) {
   const b = await prisma.booking.findFirst({ where: { id, unit: { property: ownerScopeFilter(user) } } });
   if (!b) throw new Error("Booking not found.");
   return b;
 }
 
 export async function enableShortStay(formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("stays.manage");
   await assertPremium(user.orgId);
   const unitId = String(formData.get("unitId") ?? "");
   const rate = Number(formData.get("nightlyRate"));
@@ -49,7 +49,7 @@ const bookingSchema = z.object({
 });
 
 export async function createBooking(formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("stays.manage");
   await assertPremium(user.orgId);
 
   const parsed = bookingSchema.safeParse({
@@ -125,7 +125,7 @@ export async function createBooking(formData: FormData) {
 }
 
 export async function setBookingStatus(id: string, status: BookingStatus) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("stays.manage");
   const b = await ownBooking(user, id);
 
   await prisma.$transaction(async (tx) => {
@@ -149,7 +149,7 @@ export async function setBookingStatus(id: string, status: BookingStatus) {
 }
 
 export async function recordBookingPayment(id: string, formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("stays.manage");
   const b = await ownBooking(user, id);
   const amount = Number(formData.get("amount"));
   if (!Number.isFinite(amount) || amount <= 0) back("?error=" + encodeURIComponent("Enter the amount received."));
@@ -159,7 +159,7 @@ export async function recordBookingPayment(id: string, formData: FormData) {
 }
 
 export async function markCleaned(id: string) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("stays.manage");
   await ownBooking(user, id);
   await prisma.booking.update({ where: { id }, data: { cleaned: true } });
   revalidatePath("/stays");

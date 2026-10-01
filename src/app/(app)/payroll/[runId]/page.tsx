@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { PAYROLL_RATES } from "@/lib/payroll";
 import { saveRun, approveRun, deleteRun, markPayslipPaid } from "../actions";
@@ -10,7 +10,7 @@ const input = "rounded border border-border px-2 py-1.5 text-sm outline-none foc
 
 export default async function RunPage({ params }: { params: Promise<{ runId: string }> }) {
   const { runId } = await params;
-  const user = await requireRole("ADMIN");
+  const user = await requirePermission("payroll.manage");
   const run = await prisma.payrollRun.findFirst({
     where: { id: runId, orgId: user.orgId },
     include: { payslips: { include: { employee: true }, orderBy: { employee: { name: "asc" } } } },

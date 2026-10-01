@@ -99,7 +99,7 @@ export default async function LeasePage({ params }: { params: Promise<{ id: stri
   const { id } = await params;
   const { user, lease } = await getManagedLease(id);
   if (!(await orgHasPremium(user.orgId))) {
-    return <UpgradeCard feature="Move-in and move-out" isAdmin={user.role === "ADMIN"} />;
+    return <UpgradeCard feature="Move-in and move-out" isAdmin={user.can("billing.manage")} />;
   }
 
   const [checklists, bills] = await Promise.all([

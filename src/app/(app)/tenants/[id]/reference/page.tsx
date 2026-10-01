@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { tenantReliability } from "@/lib/reliability";
 import { PrintButton } from "@/components/PrintButton";
@@ -10,7 +10,7 @@ const day = (d: Date | null | undefined) => (d ? d.toISOString().slice(0, 10) : 
 /** Printable tenant payment reference: what a tenant can show a future landlord or a lender. */
 export default async function TenantReferencePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("tenants.manage");
 
   const tenant = await prisma.tenant.findFirst({
     where: { id, orgId: user.orgId },

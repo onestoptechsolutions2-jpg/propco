@@ -1,8 +1,8 @@
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { createOwner } from "../actions";
 
 export default async function NewOwnerPage() {
-  await requireRole("STAFF");
+  await requirePermission("owners.manage");
 
   return (
     <div className="max-w-lg">

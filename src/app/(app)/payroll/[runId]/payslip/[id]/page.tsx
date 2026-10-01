@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { PrintButton } from "@/components/PrintButton";
 
@@ -8,7 +8,7 @@ const fmt = (v: unknown) => Number(v ?? 0).toLocaleString("en-US", { minimumFrac
 
 export default async function PayslipPage({ params }: { params: Promise<{ runId: string; id: string }> }) {
   const { runId, id } = await params;
-  const user = await requireRole("ADMIN");
+  const user = await requirePermission("payroll.manage");
   const s = await prisma.payslip.findFirst({
     where: { id, runId, run: { orgId: user.orgId } },
     include: { employee: true, run: { include: { org: true } } },

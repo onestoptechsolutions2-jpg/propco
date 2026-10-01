@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter } from "@/lib/access";
 import { assertPremium } from "@/lib/lease-access";
 import { notifyUtilityBill } from "@/lib/notify-events";
 import { detectUsageAlert } from "@/lib/usage-alerts";
@@ -21,7 +21,7 @@ const meterSchema = z.object({
 });
 
 export async function createMeter(formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("utilities.manage");
   await assertPremium(user.orgId);
 
   const parsed = meterSchema.parse({
@@ -44,7 +44,7 @@ export async function createMeter(formData: FormData) {
 }
 
 export async function deactivateMeter(meterId: string) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("utilities.manage");
   await prisma.utilityMeter.updateMany({
     where: { id: meterId, unit: { property: ownerScopeFilter(user) } },
     data: { active: false },
@@ -58,7 +58,7 @@ export async function deactivateMeter(meterId: string) {
  * kind=OPENING records a baseline for a new tenant without billing anyone.
  */
 export async function recordReadings(formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("utilities.manage");
   await assertPremium(user.orgId);
 
   const kind = formData.get("kind") === "OPENING" ? "OPENING" : "BILL";
@@ -145,7 +145,7 @@ export async function recordReadings(formData: FormData) {
 }
 
 export async function markBillPaid(readingId: string) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("utilities.manage");
   await prisma.meterReading.updateMany({
     where: { id: readingId, status: "UNPAID", meter: { unit: { property: ownerScopeFilter(user) } } },
     data: { status: "PAID", paidDate: new Date() },

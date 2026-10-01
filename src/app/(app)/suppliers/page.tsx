@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 
 const TRADE_LABEL: Record<string, string> = {
@@ -12,7 +12,7 @@ const TRADE_LABEL: Record<string, string> = {
 };
 
 export default async function SuppliersPage() {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("suppliers.manage");
 
   const suppliers = await prisma.supplier.findMany({
     where: { orgId: user.orgId },

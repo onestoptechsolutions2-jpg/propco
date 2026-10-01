@@ -1,13 +1,13 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter } from "@/lib/access";
 import { assertPremium } from "@/lib/lease-access";
 import { generateCode } from "@/lib/access-codes";
 import { revalidatePath } from "next/cache";
 
 export async function createAccessCode(formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("access.manage");
   await assertPremium(user.orgId);
 
   const unitId = String(formData.get("unitId") ?? "");
@@ -30,7 +30,7 @@ export async function createAccessCode(formData: FormData) {
 }
 
 export async function revokeAccessCode(id: string) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("access.manage");
   await prisma.accessCode.updateMany({
     where: { id, unit: { property: ownerScopeFilter(user) } },
     data: { active: false, validTo: new Date() },

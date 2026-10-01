@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { addEmployee } from "../actions";
 import { EmployeeFields } from "../EmployeeFields";
@@ -7,7 +7,7 @@ import { EmployeeFields } from "../EmployeeFields";
 const fmt = (v: unknown) => Number(v ?? 0).toLocaleString("en-US", { maximumFractionDigits: 0 });
 
 export default async function EmployeesPage() {
-  const user = await requireRole("ADMIN");
+  const user = await requirePermission("payroll.manage");
   const employees = await prisma.employee.findMany({ where: { orgId: user.orgId }, orderBy: [{ active: "desc" }, { name: "asc" }] });
 
   return (

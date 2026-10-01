@@ -2,8 +2,9 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter, type AccessUser } from "@/lib/access";
 import { notifyInvoice } from "@/lib/notify-events";
+import { audit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -11,7 +12,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 const VAT_RATE = 0.16; // Kenya standard rate
 const back: (q?: string) => never = (q = "") => redirect(`/invoices${q}`);
 
-type User = Awaited<ReturnType<typeof requireRole>>;
+type User = AccessUser;
 
 /** Invoices this user may act on: everything in the company, or (landlords) only their own repairs. */
 function invoiceScope(user: User, id: string) {
@@ -32,7 +33,7 @@ const schema = z.object({
 });
 
 export async function createInvoice(formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("invoices.manage");
   const parsed = schema.safeParse({
     supplierId: formData.get("supplierId"),
     requestId: formData.get("requestId") || undefined,
@@ -78,13 +79,13 @@ export async function createInvoice(formData: FormData) {
 }
 
 export async function approveInvoice(id: string) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("invoices.manage");
   const inv = await prisma.supplierInvoice.findFirst({ where: invoiceScope(user, id), include: { request: true } });
   if (!inv || inv.status !== "SUBMITTED") return;
 
   // Approval limit: big invoices need an admin (or the landlord themself).
   const org = await prisma.organization.findUniqueOrThrow({ where: { id: user.orgId } });
-  if (org.approvalLimit && Number(inv.total) > Number(org.approvalLimit) && user.role === "STAFF") {
+  if (org.approvalLimit && Number(inv.total) > Number(org.approvalLimit) && !user.can("invoices.approve_large")) {
     back("?error=" + encodeURIComponent(`Invoices over KES ${Number(org.approvalLimit).toLocaleString()} need an admin to approve.`));
   }
 
@@ -95,13 +96,14 @@ export async function approveInvoice(id: string) {
       await tx.maintenanceRequest.update({ where: { id: inv.request.id }, data: { actualCost: inv.total } });
     }
   });
+  await audit(user, "invoice.approved", `KES ${Number(inv.total)} (${id})`);
   await notifyInvoice(id, "APPROVED");
   revalidatePath("/invoices");
   back();
 }
 
 export async function rejectInvoice(id: string, formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("invoices.manage");
   const inv = await prisma.supplierInvoice.findFirst({ where: invoiceScope(user, id) });
   if (!inv || inv.status !== "SUBMITTED") return;
   await prisma.supplierInvoice.update({
@@ -113,7 +115,7 @@ export async function rejectInvoice(id: string, formData: FormData) {
 }
 
 export async function payInvoice(id: string, formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("invoices.manage");
   const inv = await prisma.supplierInvoice.findFirst({ where: invoiceScope(user, id) });
   if (!inv || inv.status !== "APPROVED") return;
   const method = String(formData.get("method") ?? "MPESA");
@@ -131,13 +133,14 @@ export async function payInvoice(id: string, formData: FormData) {
       });
     }
   });
+  await audit(user, "invoice.paid", `KES ${Number(inv.total)} (${id})`);
   await notifyInvoice(id, "PAID");
   revalidatePath("/invoices");
   revalidatePath("/supplier-payments");
 }
 
 export async function deleteInvoice(id: string) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("invoices.manage");
   await prisma.supplierInvoice.deleteMany({ where: { ...invoiceScope(user, id), status: { in: ["SUBMITTED", "REJECTED"] } } });
   revalidatePath("/invoices");
 }

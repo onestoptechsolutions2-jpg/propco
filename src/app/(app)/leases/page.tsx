@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { orgHasPremium } from "@/lib/lease-access";
 import { UpgradeCard } from "@/components/UpgradeCard";
 
 export default async function LeasesPage() {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("leases.manage");
   if (!(await orgHasPremium(user.orgId))) {
-    return <UpgradeCard feature="Move-in and move-out" isAdmin={user.role === "ADMIN"} />;
+    return <UpgradeCard feature="Move-in and move-out" isAdmin={user.can("billing.manage")} />;
   }
 
   const scope = { unit: { property: ownerScopeFilter(user) } };

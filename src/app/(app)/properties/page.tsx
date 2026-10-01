@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export default async function PropertiesPage() {
   const user = await requireUser();
-  const isStaffLike = user.role === "ADMIN" || user.role === "STAFF" || user.role === "LANDLORD";
+  const isStaffLike = user.can("properties.manage");
 
   const properties = await prisma.property.findMany({
     where: ownerScopeFilter(user),

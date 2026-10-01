@@ -14,7 +14,7 @@ export default async function ReceiptPage({
   params: Promise<{ leaseId: string; paymentId: string }>;
 }) {
   const { leaseId, paymentId } = await params;
-  const { lease } = await getManagedLease(leaseId);
+  const { lease } = await getManagedLease(leaseId, "rent.manage");
 
   const payment = await prisma.payment.findFirst({ where: { id: paymentId, leaseId, status: "PAID" } });
   if (!payment) notFound();

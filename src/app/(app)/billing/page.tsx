@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { PLANS, orgStatus } from "@/lib/plans";
 import { whatsappLink } from "@/lib/whatsapp";
@@ -8,7 +8,7 @@ import type { Plan } from "@prisma/client";
 
 async function requestUpgrade(plan: Plan) {
   "use server";
-  const user = await requireRole("ADMIN");
+  const user = await requirePermission("billing.manage");
   await prisma.organization.update({
     where: { id: user.orgId },
     data: { billingNote: `Upgrade to ${plan} requested on ${new Date().toISOString().slice(0, 10)}` },
@@ -19,7 +19,7 @@ async function requestUpgrade(plan: Plan) {
 
 async function sharePaymentProof(formData: FormData) {
   "use server";
-  const user = await requireRole("ADMIN");
+  const user = await requirePermission("billing.manage");
   const text = String(formData.get("proof") ?? "").trim().slice(0, 600);
   if (text.length < 10) redirect("/billing");
   await prisma.organization.update({
@@ -32,7 +32,7 @@ async function sharePaymentProof(formData: FormData) {
 
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ shared?: string }> }) {
   const { shared } = await searchParams;
-  const user = await requireRole("ADMIN");
+  const user = await requirePermission("billing.manage");
   const org = await prisma.organization.findUniqueOrThrow({ where: { id: user.orgId } });
   const units = await prisma.unit.count({ where: { property: { orgId: org.id } } });
   const status = orgStatus(org);

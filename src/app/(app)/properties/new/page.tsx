@@ -1,9 +1,9 @@
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { createProperty } from "../actions";
 
 export default async function NewPropertyPage() {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("properties.manage");
 
   const owners = await prisma.owner.findMany({
     where: { orgId: user.orgId, ...(user.role === "LANDLORD" && user.ownerId ? { id: user.ownerId } : {}) },

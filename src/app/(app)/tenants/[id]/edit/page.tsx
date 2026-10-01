@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter } from "@/lib/access";
 import { tenantReliability } from "@/lib/reliability";
 import { prisma } from "@/lib/prisma";
 import { updateTenant, deleteTenant, createLease } from "../../actions";
@@ -11,7 +11,7 @@ export default async function EditTenantPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("tenants.manage");
 
   const [tenant, vacantUnits] = await Promise.all([
     prisma.tenant.findFirst({

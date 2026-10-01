@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { updateSupplier, deleteSupplier } from "../../actions";
 
@@ -9,7 +9,7 @@ export default async function EditSupplierPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("suppliers.manage");
 
   const supplier = await prisma.supplier.findFirst({ where: { id, orgId: user.orgId } });
   if (!supplier) notFound();

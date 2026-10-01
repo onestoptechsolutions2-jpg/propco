@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { createInvoice, approveInvoice, rejectInvoice, payInvoice, deleteInvoice } from "./actions";
 import type { InvoiceStatus } from "@prisma/client";
@@ -19,7 +19,7 @@ export default async function InvoicesPage({
 }: {
   searchParams: Promise<{ status?: string; error?: string; added?: string }>;
 }) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("invoices.manage");
   const { status, error, added } = await searchParams;
   const tab = TABS.find((t) => t.key === status)?.key ?? "SUBMITTED";
 

@@ -1,4 +1,4 @@
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { orgHasPremium } from "@/lib/lease-access";
 import { UpgradeCard } from "@/components/UpgradeCard";
@@ -7,9 +7,9 @@ import { createAccessCode, revokeAccessCode } from "./actions";
 const input = "rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink";
 
 export default async function AccessPage() {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("access.manage");
   if (!(await orgHasPremium(user.orgId))) {
-    return <UpgradeCard feature="Door access codes" isAdmin={user.role === "ADMIN"} />;
+    return <UpgradeCard feature="Door access codes" isAdmin={user.can("billing.manage")} />;
   }
 
   const [properties, codes] = await Promise.all([

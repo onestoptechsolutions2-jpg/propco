@@ -114,6 +114,18 @@ NSSF / SHIF / housing levy worked out automatically (rates are in
 bonuses and deductions on draft runs, approve to send payslips, mark each paid,
 printable payslips, and a "to pay the authorities" summary.
 
+**Identity and access (IAM)**: access is permission-based, not role-name based.
+Every page and action checks a permission from `src/lib/permissions.ts`.
+Built-in roles (Admin, Staff, Landlord, Owner) have fixed defaults, and each company
+admin can build **custom roles** (e.g. Accountant, Caretaker) by ticking permissions
+under *Team & roles*. Also: suspend/restore users (effective on the next request even
+though sessions last 90 days), temporary passwords that must be changed at first sign-in,
+admin password reset, 5-wrong-passwords lockout (15 minutes), no privilege escalation
+(you can only grant permissions you hold; only admins create admins; the last active
+admin can't be removed), per-user "My account" with password change, and an activity
+log of people, role and money changes (payroll, payouts, invoices). Permissions are read
+from the database on every request, so role changes apply immediately.
+
 Not built yet: a document/contract store (leases, agreements, e-signature) and
 scheduled/exported reports. Everything above builds on the same foundation.
 

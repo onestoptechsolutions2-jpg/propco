@@ -1,8 +1,8 @@
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { createTenant } from "../actions";
 
 export default async function NewTenantPage() {
-  await requireRole("STAFF", "LANDLORD");
+  await requirePermission("tenants.manage");
 
   return (
     <div className="max-w-lg">

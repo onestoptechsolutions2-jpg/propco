@@ -32,6 +32,15 @@ model User {
   passwordHash  String? // set for credentials-based accounts; null for OAuth-only users
   role          Role      @default(STAFF)
 
+  // IAM: custom role (permissions), suspension, password policy, brute-force lockout.
+  orgRole            OrgRole?  @relation(fields: [orgRoleId], references: [id], onDelete: SetNull)
+  orgRoleId          String?
+  active             Boolean   @default(true)
+  mustChangePassword Boolean   @default(false)
+  lastLoginAt        DateTime?
+  failedLogins       Int       @default(0)
+  lockedUntil        DateTime?
+
   // If this user is an Owner or Landlord, link them to their Owner record.
   ownerProfile Owner? @relation(fields: [ownerId], references: [id])
   ownerId      String? @unique
@@ -463,6 +472,7 @@ model Organization {
   proofs        PaymentProof[]
   serviceLeads  ServiceLead[]
   invoices      SupplierInvoice[]
+  roles         OrgRole[]
   employees     Employee[]
   payrollRuns   PayrollRun[]
 
@@ -893,4 +903,38 @@ model Payslip {
   employeeId String
 
   @@unique([runId, employeeId])
+}
+
+// ---------- IAM: custom roles and audit trail ----------
+
+// A named set of permissions an admin builds for their own company (e.g.
+// "Accountant", "Caretaker"). Users with a custom role are org-wide staff whose
+// access is limited to exactly these permissions (see src/lib/permissions.ts).
+model OrgRole {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  permissions String[]
+
+  org   Organization @relation(fields: [orgId], references: [id])
+  orgId String
+
+  users User[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([orgId, name])
+}
+
+// Who did what, when. Written for people, role and money changes.
+model AuditLog {
+  id        String   @id @default(cuid())
+  orgId     String
+  actorId   String?
+  actorName String
+  action    String // e.g. "user.created", "role.updated", "payroll.approved"
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([orgId, createdAt])
 }

@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { saveListing, saveContactPhone } from "./actions";
 import { PhotoUploader } from "@/components/PhotoUploader";
@@ -8,7 +8,7 @@ import { uploadPhoto, deletePhoto } from "@/lib/photo-actions";
 const input = "w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink";
 
 export default async function ListingsPage() {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("listings.manage");
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
   const proto = h.get("x-forwarded-proto") ?? "https";

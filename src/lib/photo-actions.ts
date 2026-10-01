@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter } from "@/lib/access";
 import { revalidatePath } from "next/cache";
 
 const MAX_BYTES = 900_000; // the browser shrinks photos to ~200-400 KB first
@@ -10,7 +10,7 @@ const ALLOWED = ["image/jpeg", "image/png", "image/webp"];
 
 /** Attach a photo to a repair request ("request") or a unit's vacancy page ("unit"). */
 export async function uploadPhoto(kind: "request" | "unit", targetId: string, formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("maintenance.manage", "listings.manage");
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) throw new Error("Choose a photo first.");
@@ -48,7 +48,7 @@ export async function uploadPhoto(kind: "request" | "unit", targetId: string, fo
 }
 
 export async function deletePhoto(id: string) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("maintenance.manage", "listings.manage");
   const photo = await prisma.photo.findFirst({ where: { id, orgId: user.orgId } });
   if (!photo) return;
   await prisma.photo.delete({ where: { id } });

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { orgHasPremium } from "@/lib/lease-access";
 import { UpgradeCard } from "@/components/UpgradeCard";
@@ -8,7 +8,7 @@ import { createRun } from "./actions";
 const fmt = (v: unknown) => Number(v ?? 0).toLocaleString("en-US", { maximumFractionDigits: 0 });
 
 export default async function PayrollPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  const user = await requireRole("ADMIN");
+  const user = await requirePermission("payroll.manage");
   if (!(await orgHasPremium(user.orgId))) return <UpgradeCard feature="Payroll" isAdmin />;
   const { error } = await searchParams;
 

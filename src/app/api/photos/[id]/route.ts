@@ -16,9 +16,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const isPublic = !!photo.unit?.listed;
   if (!isPublic) {
     const session = await auth();
-    if (!session?.user?.orgId || session.user.orgId !== photo.orgId) {
+    if (!session?.user?.id || !session.user.orgId || session.user.orgId !== photo.orgId) {
       return new Response("Not found", { status: 404 });
     }
+    const u = await prisma.user.findUnique({ where: { id: session.user.id }, select: { active: true, orgId: true } });
+    if (!u?.active || u.orgId !== photo.orgId) return new Response("Not found", { status: 404 });
   }
 
   return new Response(new Uint8Array(photo.data), {

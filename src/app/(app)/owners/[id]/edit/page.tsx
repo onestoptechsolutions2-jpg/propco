@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { updateOwner, deleteOwner } from "../../actions";
 
@@ -9,7 +9,7 @@ export default async function EditOwnerPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = await requireRole("STAFF");
+  const user = await requirePermission("owners.manage");
 
   const owner = await prisma.owner.findFirst({ where: { id, orgId: user.orgId } });
   if (!owner) notFound();

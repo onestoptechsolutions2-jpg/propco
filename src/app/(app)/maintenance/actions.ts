@@ -2,13 +2,13 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireUser, requireRole, canManageOwnerRecords } from "@/lib/access";
+import { requireUser, requirePermission, canManageOwnerRecords } from "@/lib/access";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { notifyMaintenanceAssigned, notifyMaintenanceResolved } from "@/lib/notify-events";
 
 async function assertCanManageUnit(unitId: string) {
-  const user = await requireUser();
+  const user = await requirePermission("maintenance.manage");
   const unit = await prisma.unit.findUniqueOrThrow({
     where: { id: unitId },
     include: { property: true },
@@ -50,7 +50,7 @@ const assignSchema = z.object({
 });
 
 export async function assignSupplier(requestId: string, formData: FormData) {
-  await requireRole("STAFF", "LANDLORD");
+  await requirePermission("maintenance.manage");
   const request = await prisma.maintenanceRequest.findUniqueOrThrow({
     where: { id: requestId },
     include: { unit: { include: { property: true } } },
@@ -86,7 +86,7 @@ export async function setStatus(
   requestId: string,
   status: "OPEN" | "ASSIGNED" | "IN_PROGRESS" | "DONE" | "CANCELLED"
 ) {
-  await requireRole("STAFF", "LANDLORD");
+  await requirePermission("maintenance.manage");
   const request = await prisma.maintenanceRequest.findUniqueOrThrow({
     where: { id: requestId },
     include: { unit: { include: { property: true } } },
@@ -110,7 +110,7 @@ const completeSchema = z.object({
 });
 
 export async function completeRequest(requestId: string, formData: FormData) {
-  await requireRole("STAFF", "LANDLORD");
+  await requirePermission("maintenance.manage");
   const request = await prisma.maintenanceRequest.findUniqueOrThrow({
     where: { id: requestId },
     include: { unit: { include: { property: true } } },

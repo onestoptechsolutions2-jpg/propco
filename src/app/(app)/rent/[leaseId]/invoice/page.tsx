@@ -10,7 +10,7 @@ const day = (d: Date | null | undefined) => (d ? d.toISOString().slice(0, 10) : 
 /** Statement of what a tenant owes right now: unpaid rent plus unpaid utility bills. */
 export default async function InvoicePage({ params }: { params: Promise<{ leaseId: string }> }) {
   const { leaseId } = await params;
-  const { lease } = await getManagedLease(leaseId);
+  const { lease } = await getManagedLease(leaseId, "rent.manage");
 
   const [org, rent, bills] = await Promise.all([
     prisma.organization.findUniqueOrThrow({ where: { id: lease.unit.property.orgId } }),

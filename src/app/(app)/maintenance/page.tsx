@@ -20,7 +20,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default async function MaintenancePage() {
   const user = await requireUser();
-  const isStaffLike = user.role === "ADMIN" || user.role === "STAFF" || user.role === "LANDLORD";
+  const isStaffLike = user.can("maintenance.manage");
 
   // Owners get a read-only view scoped to their own properties via
   // ownerScopeFilter below; everyone else with no matching scope sees an

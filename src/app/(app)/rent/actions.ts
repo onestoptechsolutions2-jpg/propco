@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireUser, canManageOwnerRecords } from "@/lib/access";
+import { requirePermission, canManageOwnerRecords } from "@/lib/access";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { notifyPaymentReceived } from "@/lib/notify-events";
@@ -18,7 +18,7 @@ const paymentSchema = z.object({
 });
 
 export async function recordPayment(leaseId: string, formData: FormData) {
-  const user = await requireUser();
+  const user = await requirePermission("rent.manage");
   const lease = await prisma.lease.findUniqueOrThrow({
     where: { id: leaseId },
     include: { unit: { include: { property: true } } },
@@ -59,7 +59,7 @@ export async function recordPayment(leaseId: string, formData: FormData) {
 }
 
 export async function markPaymentPaid(leaseId: string, paymentId: string) {
-  const user = await requireUser();
+  const user = await requirePermission("rent.manage");
   const lease = await prisma.lease.findUniqueOrThrow({
     where: { id: leaseId },
     include: { unit: { include: { property: true } } },

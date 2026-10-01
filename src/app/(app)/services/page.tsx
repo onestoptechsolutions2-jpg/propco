@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { whatsappLink } from "@/lib/whatsapp";
 import { redirect } from "next/navigation";
@@ -16,7 +16,7 @@ const LABEL: Record<string, string> = {
 
 async function requestQuote(partnerId: string, formData: FormData) {
   "use server";
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("services.view");
   const partner = await prisma.servicePartner.findFirst({ where: { id: partnerId, active: true } });
   if (!partner) throw new Error("This provider is no longer available.");
   const org = await prisma.organization.findUniqueOrThrow({ where: { id: user.orgId } });
@@ -32,7 +32,7 @@ async function requestQuote(partnerId: string, formData: FormData) {
 }
 
 export default async function ServicesPage() {
-  await requireRole("STAFF", "LANDLORD");
+  await requirePermission("services.view");
   const partners = await prisma.servicePartner.findMany({
     where: { active: true },
     orderBy: [{ category: "asc" }, { name: "asc" }],

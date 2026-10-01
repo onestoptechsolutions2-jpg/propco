@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter } from "@/lib/access";
 import { orgHasPremium } from "@/lib/lease-access";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -18,7 +18,7 @@ const tenantSchema = z.object({
 });
 
 export async function createTenant(formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("tenants.manage");
 
   const parsed = tenantSchema.parse({
     name: formData.get("name"),
@@ -39,7 +39,7 @@ export async function createTenant(formData: FormData) {
 }
 
 export async function updateTenant(tenantId: string, formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("tenants.manage");
 
   const parsed = tenantSchema.parse({
     name: formData.get("name"),
@@ -61,7 +61,7 @@ export async function updateTenant(tenantId: string, formData: FormData) {
 }
 
 export async function deleteTenant(tenantId: string) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("tenants.manage");
   await prisma.tenant.delete({ where: { id: tenantId, orgId: user.orgId } });
   revalidatePath("/tenants");
   redirect("/tenants");
@@ -76,7 +76,7 @@ const leaseSchema = z.object({
 });
 
 export async function createLease(formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("tenants.manage");
 
   const parsed = leaseSchema.parse({
     unitId: formData.get("unitId"),

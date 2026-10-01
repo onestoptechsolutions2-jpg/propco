@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { notifySupplierPaid } from "@/lib/notify-events";
@@ -13,7 +13,7 @@ const paidSchema = z.object({
 });
 
 export async function markSupplierPaid(requestId: string, formData: FormData) {
-  const user = await requireRole("STAFF");
+  const user = await requirePermission("supplier_payments.manage");
 
   const parsed = paidSchema.parse({
     method: formData.get("method"),

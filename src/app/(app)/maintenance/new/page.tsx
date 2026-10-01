@@ -1,9 +1,9 @@
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { createMaintenanceRequest } from "../actions";
 
 export default async function NewMaintenanceRequestPage() {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("maintenance.manage");
 
   const properties = await prisma.property.findMany({
     where: ownerScopeFilter(user),

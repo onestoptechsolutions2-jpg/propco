@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { orgHasPremium } from "@/lib/lease-access";
 import { whatsappLink } from "@/lib/whatsapp";
@@ -22,9 +22,9 @@ export default async function UtilitiesPage({
 }: {
   searchParams: Promise<{ recorded?: string }>;
 }) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("utilities.manage");
   if (!(await orgHasPremium(user.orgId))) {
-    return <UpgradeCard feature="Utilities billing" isAdmin={user.role === "ADMIN"} />;
+    return <UpgradeCard feature="Utilities billing" isAdmin={user.can("billing.manage")} />;
   }
   const { recorded } = await searchParams;
   const scope = ownerScopeFilter(user);

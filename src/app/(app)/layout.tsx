@@ -5,16 +5,12 @@ import { AppNav, type NavGroup, type QuickItem } from "@/components/AppNav";
 import { PwaSetup } from "@/components/PwaSetup";
 import Link from "next/link";
 import { PLANS, isPlatformAdmin, orgStatus } from "@/lib/plans";
-import type { Role } from "@prisma/client";
-
-type Item = { href: string; label: string; hint?: string; roles?: Role[] };
+type Item = { href: string; label: string; hint?: string; perm?: string };
 type Group = { title?: string; items: Item[] };
 
-const STAFF: Role[] = ["ADMIN", "STAFF"];
-const MANAGERS: Role[] = ["ADMIN", "STAFF", "LANDLORD"];
-
 // Plain-language labels, grouped by what the person is trying to do.
-// Omit `roles` for "everyone signed in".
+// `perm` is the permission needed to see the item (see src/lib/permissions.ts);
+// omit it for "everyone signed in".
 const NAV: Group[] = [
   {
     items: [
@@ -27,55 +23,55 @@ const NAV: Group[] = [
     title: "My portfolio",
     items: [
       { href: "/properties", label: "Properties & units" },
-      { href: "/owners", label: "Owners", roles: STAFF },
-      { href: "/tenants", label: "Tenants", roles: MANAGERS },
-      { href: "/leases", label: "Move in & out", hint: "Onboarding and clearing a unit", roles: MANAGERS },
+      { href: "/owners", label: "Owners", perm: "owners.manage" },
+      { href: "/tenants", label: "Tenants", perm: "tenants.manage" },
+      { href: "/leases", label: "Move in & out", hint: "Onboarding and clearing a unit", perm: "leases.manage" },
     ],
   },
   {
     title: "Vacancies & stays",
     items: [
-      { href: "/listings", label: "Vacancy pages", hint: "Fill empty units faster", roles: MANAGERS },
-      { href: "/stays", label: "Short stays", hint: "Homestay / BnB bookings", roles: MANAGERS },
-      { href: "/access", label: "Door codes", hint: "Smart lock and keypad codes", roles: MANAGERS },
+      { href: "/listings", label: "Vacancy pages", hint: "Fill empty units faster", perm: "listings.manage" },
+      { href: "/stays", label: "Short stays", hint: "Homestay / BnB bookings", perm: "stays.manage" },
+      { href: "/access", label: "Door codes", hint: "Smart lock and keypad codes", perm: "access.manage" },
     ],
   },
   {
     title: "Money in",
     items: [
-      { href: "/rent", label: "Collect rent", roles: MANAGERS },
-      { href: "/rent/confirm", label: "Confirm M-Pesa", hint: "Tenants share proof of payment", roles: MANAGERS },
-      { href: "/utilities", label: "Water, power & internet", roles: MANAGERS },
+      { href: "/rent", label: "Collect rent", perm: "rent.manage" },
+      { href: "/rent/confirm", label: "Confirm M-Pesa", hint: "Tenants share proof of payment", perm: "rent.manage" },
+      { href: "/utilities", label: "Water, power & internet", perm: "utilities.manage" },
     ],
   },
   {
     title: "Money out",
     items: [
-      // Landlords collect their own rent, so agency payouts don't apply to them.
-      { href: "/payouts", label: "Owner payouts", roles: ["ADMIN", "STAFF", "OWNER"] },
-      { href: "/invoices", label: "Supplier invoices", hint: "Approve, then pay", roles: MANAGERS },
-      { href: "/supplier-payments", label: "Pay suppliers", roles: STAFF },
+      { href: "/payouts", label: "Owner payouts", perm: "payouts.view" },
+      { href: "/invoices", label: "Supplier invoices", hint: "Approve, then pay", perm: "invoices.manage" },
+      { href: "/supplier-payments", label: "Pay suppliers", perm: "supplier_payments.manage" },
     ],
   },
   {
     title: "Repairs",
     items: [
       { href: "/maintenance", label: "Repair requests" },
-      { href: "/maintenance/schedule", label: "Preventive calendar", hint: "Recurring jobs", roles: MANAGERS },
-      { href: "/suppliers", label: "Suppliers", roles: MANAGERS },
-      { href: "/services", label: "Services & insurance", hint: "Trusted providers", roles: MANAGERS },
+      { href: "/maintenance/schedule", label: "Preventive calendar", hint: "Recurring jobs", perm: "maintenance.manage" },
+      { href: "/suppliers", label: "Suppliers", perm: "suppliers.manage" },
+      { href: "/services", label: "Services & insurance", hint: "Trusted providers", perm: "services.view" },
     ],
   },
   {
     title: "Communication",
-    items: [{ href: "/notifications", label: "Messages", roles: STAFF }],
+    items: [{ href: "/notifications", label: "Messages", perm: "messages.manage" }],
   },
   {
     title: "Account",
     items: [
-      { href: "/payroll", label: "Payroll", hint: "Salaries and payslips", roles: ["ADMIN"] },
-      { href: "/team", label: "My team", roles: ["ADMIN"] },
-      { href: "/billing", label: "Plan & billing", roles: ["ADMIN"] },
+      { href: "/payroll", label: "Payroll", hint: "Salaries and payslips", perm: "payroll.manage" },
+      { href: "/team", label: "Team & roles", hint: "People, access and activity", perm: "team.manage" },
+      { href: "/billing", label: "Plan & billing", perm: "billing.manage" },
+      { href: "/account", label: "My account", hint: "Password and sign-in" },
     ],
   },
 ];
@@ -86,7 +82,8 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const user = await requireUser();
-  const isStaff = user.role === "ADMIN" || user.role === "STAFF";
+  const canRent = user.can("rent.manage");
+  const canMessages = user.can("messages.manage");
 
   // WhatsApp messages waiting for a person to tap "Send".
   const jobsOverdue =
@@ -99,8 +96,10 @@ export default async function AppLayout({
             property: user.role === "LANDLORD" ? { orgId: user.orgId, ownerId: user.ownerId ?? "__none__" } : { orgId: user.orgId },
           },
         });
-  const proofsWaiting =await prisma.paymentProof.count({ where: { orgId: user.orgId, status: "PENDING" } });
-  const whatsappWaiting = isStaff
+  const proofsWaiting = canRent
+    ? await prisma.paymentProof.count({ where: { orgId: user.orgId, status: "PENDING" } })
+    : 0;
+  const whatsappWaiting = canMessages
     ? await prisma.notification.count({ where: { orgId: user.orgId, channel: "WHATSAPP", status: "QUEUED" } })
     : 0;
 
@@ -124,17 +123,19 @@ export default async function AppLayout({
         ]
       : [
           { href: "/dashboard", label: "Home", icon: "home" },
-          { href: "/rent", label: "Rent", icon: "cash", badge: proofsWaiting },
+          ...(canRent ? [{ href: "/rent", label: "Rent", icon: "cash" as const, badge: proofsWaiting }] : []),
           { href: "/maintenance", label: "Repairs", icon: "wrench" },
-          isStaff
-            ? { href: "/notifications", label: "Messages", icon: "chat", badge: whatsappWaiting }
-            : { href: "/tenants", label: "Tenants", icon: "users" },
+          ...(canMessages
+            ? [{ href: "/notifications", label: "Messages", icon: "chat" as const, badge: whatsappWaiting }]
+            : user.can("tenants.manage")
+              ? [{ href: "/tenants", label: "Tenants", icon: "users" as const }]
+              : []),
         ];
 
   const groups: NavGroup[] = nav.map((g) => ({
     title: g.title,
     items: g.items
-      .filter((i) => !i.roles || i.roles.includes(user.role))
+      .filter((i) => !i.perm || user.can(i.perm))
       .map(({ href, label, hint }) => ({
         href,
         label,
@@ -161,13 +162,13 @@ export default async function AppLayout({
         groups={groups}
         quick={quick}
         userLabel={user.name ?? user.email ?? ""}
-        roleLabel={user.role.toLowerCase()}
+        roleLabel={user.roleName.toLowerCase()}
         signOutAction={doSignOut}
       />
       {/* pb-28 on phones keeps the last content clear of the fixed bottom bar */}
       <main className="min-w-0 flex-1 px-4 py-6 pb-28 sm:px-6 sm:py-8 md:px-10 md:py-10 md:pb-10 print:p-0">
         <PwaSetup />
-        {user.role === "ADMIN" && (status.inTrial || overLimit || status.lapsed) && (
+        {user.can("billing.manage") && (status.inTrial || overLimit || status.lapsed) && (
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-accent-light px-4 py-3 text-sm text-ink print:hidden">
             <p>
               {status.inTrial

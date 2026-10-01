@@ -2,7 +2,8 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
+import { audit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { notifyPayoutSent } from "@/lib/notify-events";
@@ -25,7 +26,7 @@ const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Expected YYYY-M
  * untouched, and owners with no collected rent that month are skipped.
  */
 export async function generatePayouts(formData: FormData) {
-  const user = await requireRole("STAFF");
+  const user = await requirePermission("payouts.manage");
 
   const month = monthSchema.parse(formData.get("month"));
   const [year, mon] = month.split("-").map(Number);
@@ -115,7 +116,7 @@ const paidSchema = z.object({
 });
 
 export async function markPayoutPaid(payoutId: string, formData: FormData) {
-  const user = await requireRole("STAFF");
+  const user = await requirePermission("payouts.manage");
 
   const parsed = paidSchema.parse({
     method: formData.get("method"),
@@ -133,6 +134,7 @@ export async function markPayoutPaid(payoutId: string, formData: FormData) {
     },
   });
 
+  await audit(user, "payout.paid", `payout ${payout.id}`);
   await notifyPayoutSent(payout.id);
 
   revalidatePath("/payouts");

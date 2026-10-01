@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 
 function monthRange(date = new Date()) {
@@ -16,7 +16,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export default async function RentRollPage() {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("rent.manage");
   const { start, end } = monthRange();
 
   const leases = await prisma.lease.findMany({

@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -31,7 +31,7 @@ function parseSupplier(formData: FormData) {
 }
 
 export async function createSupplier(formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("suppliers.manage");
   const parsed = parseSupplier(formData);
 
   await prisma.supplier.create({
@@ -43,7 +43,7 @@ export async function createSupplier(formData: FormData) {
 }
 
 export async function updateSupplier(supplierId: string, formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("suppliers.manage");
   const parsed = parseSupplier(formData);
 
   await prisma.supplier.update({
@@ -56,7 +56,7 @@ export async function updateSupplier(supplierId: string, formData: FormData) {
 }
 
 export async function deleteSupplier(supplierId: string) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("suppliers.manage");
   await prisma.supplier.delete({ where: { id: supplierId, orgId: user.orgId } });
   revalidatePath("/suppliers");
   redirect("/suppliers");

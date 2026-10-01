@@ -1,4 +1,4 @@
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { orgHasPremium } from "@/lib/lease-access";
 import { whatsappLink } from "@/lib/whatsapp";
@@ -14,9 +14,9 @@ export default async function StaysPage({
 }: {
   searchParams: Promise<{ error?: string; added?: string; enabled?: string }>;
 }) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("stays.manage");
   if (!(await orgHasPremium(user.orgId))) {
-    return <UpgradeCard feature="Short stays (homestay / BnB)" isAdmin={user.role === "ADMIN"} />;
+    return <UpgradeCard feature="Short stays (homestay / BnB)" isAdmin={user.can("billing.manage")} />;
   }
   const { error, added, enabled } = await searchParams;
   const scope = ownerScopeFilter(user);

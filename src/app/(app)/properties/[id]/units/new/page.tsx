@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireUser, canManageOwnerRecords } from "@/lib/access";
+import { requirePermission, canManageOwnerRecords } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { createUnit } from "../../../actions";
 
@@ -9,7 +9,7 @@ export default async function NewUnitPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = await requireUser();
+  const user = await requirePermission("properties.manage");
 
   const property = await prisma.property.findUnique({ where: { id } });
   if (!property) notFound();

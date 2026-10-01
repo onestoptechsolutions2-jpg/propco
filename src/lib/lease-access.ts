@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { ownerScopeFilter, requireRole } from "@/lib/access";
+import { ownerScopeFilter, requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { hasPremium } from "@/lib/plans";
 
@@ -7,8 +7,8 @@ import { hasPremium } from "@/lib/plans";
  * Load a lease the current user may manage (their company's; for landlords,
  * their own properties). Staff, admin and landlords only.
  */
-export async function getManagedLease(leaseId: string) {
-  const user = await requireRole("STAFF", "LANDLORD");
+export async function getManagedLease(leaseId: string, permission: string = "leases.manage") {
+  const user = await requirePermission(permission);
   const lease = await prisma.lease.findFirst({
     where: { id: leaseId, unit: { property: ownerScopeFilter(user) } },
     include: { tenant: true, unit: { include: { property: { include: { owner: true } } } } },

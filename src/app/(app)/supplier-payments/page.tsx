@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { markSupplierPaid } from "./actions";
 
@@ -6,7 +6,7 @@ const fmt = (value: unknown) =>
   Number(value ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default async function SupplierPaymentsPage() {
-  const user = await requireRole("STAFF");
+  const user = await requirePermission("supplier_payments.manage");
 
   const jobs = await prisma.maintenanceRequest.findMany({
     where: { status: "DONE", supplierId: { not: null }, unit: { property: { orgId: user.orgId } } },

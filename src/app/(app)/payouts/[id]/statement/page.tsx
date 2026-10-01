@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { PrintButton } from "@/components/PrintButton";
 
@@ -9,7 +9,7 @@ const day = (d: Date | null | undefined) => (d ? d.toISOString().slice(0, 10) : 
 
 export default async function StatementPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const user = await requireRole("STAFF", "OWNER");
+  const user = await requirePermission("payouts.view");
   const isStaff = user.role === "ADMIN" || user.role === "STAFF";
 
   const payout = await prisma.payout.findFirst({

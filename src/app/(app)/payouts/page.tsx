@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { generatePayouts, markPayoutPaid } from "./actions";
 
@@ -16,7 +16,7 @@ export default async function PayoutsPage({
   searchParams: Promise<{ month?: string }>;
 }) {
   // STAFF/ADMIN manage payouts; OWNER gets a read-only view of their own.
-  const user = await requireRole("STAFF", "OWNER");
+  const user = await requirePermission("payouts.view");
   const isStaff = user.role === "ADMIN" || user.role === "STAFF";
 
   const params = await searchParams;

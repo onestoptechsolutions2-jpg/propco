@@ -19,3 +19,11 @@ node scripts/isolation-test/compare.mjs before.json after.json    # BRAVO must b
 
 Test logins use the password `Passw0rd!x` (`alpha-admin@test.local`, `bravo-staff@test.local`, ...).
 Set `BASE_URL` if the app is not on `http://localhost:3055`.
+
+## Extra checks
+
+```bash
+npx tsx scripts/isolation-test/iam-setup.ts          # custom roles + test users (run after seed.ts)
+node scripts/isolation-test/iam.mjs                  # custom roles, suspension, lockout, escalation, forced password change
+node scripts/isolation-test/flows.mjs                # payroll and supplier-invoice flows end to end
+```

@@ -54,6 +54,8 @@ export default async function LoginPage({
           <p className="mt-4 rounded border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
             {params.error === "CredentialsSignin"
               ? "That email or password didn't match. Try again."
+              : params.error === "Suspended"
+              ? "This account has been suspended. Please contact your administrator."
               : params.error === "OAuthAccountNotLinked"
                 ? "That email is already registered. Sign in with your email and password instead."
                 : params.error === "Configuration" || params.error === "OAuthSignInError"

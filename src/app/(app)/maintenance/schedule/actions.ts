@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter, type AccessUser } from "@/lib/access";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -32,14 +32,14 @@ const schema = z.object({
   supplierId: z.string().optional(),
 });
 
-async function ownProperty(user: Awaited<ReturnType<typeof requireRole>>, propertyId: string) {
+async function ownProperty(user: AccessUser, propertyId: string) {
   const property = await prisma.property.findFirst({ where: { id: propertyId, ...ownerScopeFilter(user) } });
   if (!property) throw new Error("You don't have permission for this property.");
   return property;
 }
 
 export async function addSchedule(formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("maintenance.manage");
   const parsed = schema.parse({
     propertyId: formData.get("propertyId"),
     title: formData.get("title"),
@@ -62,7 +62,7 @@ export async function addSchedule(formData: FormData) {
 
 /** Add the standard set of recurring jobs to a property in one tap. */
 export async function addTemplates(formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("maintenance.manage");
   const propertyId = String(formData.get("propertyId") ?? "");
   await ownProperty(user, propertyId);
 
@@ -81,7 +81,7 @@ export async function addTemplates(formData: FormData) {
 }
 
 export async function markScheduleDone(id: string) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("maintenance.manage");
   const s = await prisma.maintenanceSchedule.findFirst({
     where: { id, property: ownerScopeFilter(user) },
   });
@@ -95,7 +95,7 @@ export async function markScheduleDone(id: string) {
 }
 
 export async function removeSchedule(id: string) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("maintenance.manage");
   await prisma.maintenanceSchedule.deleteMany({ where: { id, property: ownerScopeFilter(user) } });
   revalidatePath("/maintenance/schedule");
 }

@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireRole, ownerScopeFilter } from "@/lib/access";
+import { requirePermission, ownerScopeFilter } from "@/lib/access";
 import { parseMpesaMessage } from "@/lib/mpesa-parse";
 import { notifyPaymentReceived } from "@/lib/notify-events";
 import { revalidatePath } from "next/cache";
@@ -12,7 +12,7 @@ const back: (q?: string) => never = (q = "") => redirect(`/rent/confirm${q}`);
 
 /** Staff paste the M-Pesa confirmation the tenant forwarded (WhatsApp, SMS, screenshot text). */
 export async function submitProof(formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("rent.manage");
   const raw = String(formData.get("message") ?? "").trim();
   if (raw.length < 10) back("?error=" + encodeURIComponent("Paste the full M-Pesa message first."));
 
@@ -40,7 +40,7 @@ export async function submitProof(formData: FormData) {
 
 /** Turn a proof into a PAID rent payment on the chosen lease. */
 export async function approveProof(proofId: string, formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("rent.manage");
 
   const proof = await prisma.paymentProof.findFirst({
     where: { id: proofId, orgId: user.orgId, status: "PENDING" },
@@ -122,7 +122,7 @@ export async function approveProof(proofId: string, formData: FormData) {
 }
 
 export async function rejectProof(proofId: string, formData: FormData) {
-  const user = await requireRole("STAFF", "LANDLORD");
+  const user = await requirePermission("rent.manage");
   await prisma.paymentProof.updateMany({
     where: { id: proofId, orgId: user.orgId, status: "PENDING" },
     data: {

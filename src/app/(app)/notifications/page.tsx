@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/access";
+import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { whatsappLink } from "@/lib/whatsapp";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
@@ -12,7 +12,7 @@ const badge: Record<string, string> = {
 };
 
 export default async function NotificationsPage() {
-  const user = await requireRole("STAFF");
+  const user = await requirePermission("messages.manage");
   const rows = await prisma.notification.findMany({ where: { orgId: user.orgId }, orderBy: { createdAt: "desc" }, take: 200 });
   const toSend = rows.filter((n) => n.channel === "WHATSAPP" && n.status === "QUEUED");
 
