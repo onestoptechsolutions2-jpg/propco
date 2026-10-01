@@ -2,7 +2,8 @@ import fs from "node:fs";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3055";
 const ids = JSON.parse(fs.readFileSync("./ids.json", "utf8"));
-const A = ids.ALPHA, B = ids.BRAVO;
+// CONTROL=1 aims the same submissions at the attacker's OWN data (proves the forms are valid).
+const A = ids.ALPHA, B = process.env.CONTROL ? ids.ALPHA : ids.BRAVO;
 
 const jar = new Map();
 const addCookies = (res) => {
@@ -15,7 +16,7 @@ const addCookies = (res) => {
 };
 const cookie = () => [...jar].map(([k, v]) => `${k}=${v}`).join("; ");
 const raw = async (path, opts = {}) => {
-  const res = await fetch(BASE + path, { redirect: "manual", ...opts, headers: { cookie: cookie(), origin: BASE, ...(opts.headers ?? {}) } });
+  const res = await fetch(BASE + path, { redirect: "manual", ...opts, headers: { cookie: cookie(), origin: BASE, connection: "close", ...(opts.headers ?? {}) } });
   addCookies(res);
   return res;
 };
@@ -66,6 +67,8 @@ async function main() {
   const today = new Date().toISOString().slice(0, 10);
   const later = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
 
+  await submit("createInvoice with B's supplier", "/invoices", "supplierId", { supplierId: B.supplier, description: "HACK INVOICE", amount: "100" });
+  await submit("createInvoice on B's repair", "/invoices", "supplierId", { supplierId: A.supplier, requestId: B.request, description: "HACK INVOICE 2", amount: "100" });
   await submit("createMeter on B's unit", "/utilities/meters/new", "unitId", { unitId: B.unit1, type: "WATER", mode: "METERED", rate: "50", unitName: "m3", label: "HACK-METER" });
   await submit("createProperty for B's owner", "/properties/new", "ownerId", { ownerId: B.owner, name: "HACK PROPERTY", addressLine1: "x", type: "SINGLE_UNIT", managementMode: "AGENCY_MANAGED", commissionPct: "10" });
   await submit("createBooking on B's unit", "/stays", "guestName", { unitId: B.unit2, guestName: "HACK GUEST", checkIn: today, checkOut: later, nightlyRate: "100", source: "Direct", guests: "1" });

@@ -80,7 +80,23 @@ async function makeOrg(tag: "ALPHA" | "BRAVO") {
   });
   await prisma.serviceLead.create({ data: { partnerId: partner.id, orgId: org.id, note: `${tag} lead` } });
 
+  const employee = await prisma.employee.create({ data: { orgId: org.id, name: `${tag} Employee`, basicSalary: 50000 } });
+  const run = await prisma.payrollRun.create({
+    data: {
+      orgId: org.id,
+      period: new Date(Date.UTC(2026, 0, 1)),
+      payslips: {
+        create: [{ employeeId: employee.id, basic: 50000, allowances: 0, extraEarnings: 0, gross: 50000, nssf: 3000, shif: 1375, housingLevy: 750, taxablePay: 44875, paye: 8000, otherDeductions: 0, netPay: 36875, employerNssf: 3000, employerHousingLevy: 750 }],
+      },
+    },
+    include: { payslips: true },
+  });
+  const invoice = await prisma.supplierInvoice.create({
+    data: { orgId: org.id, supplierId: supplier.id, requestId: request.id, description: `${tag} invoice`, amount: 1000, vat: 160, total: 1160 },
+  });
+
   ids[tag] = {
+    employee: employee.id, run: run.id, payslip: run.payslips[0].id, invoice: invoice.id,
     org: org.id, admin: admin.id, staff: staff.id, owner: owner.id, ownerUser: ownerUser.id, property: property.id,
     unit1: unit1.id, unit2: unit2.id, tenant: tenant.id, lease: lease.id, paid: paid.id, late: late.id,
     supplier: supplier.id, request: request.id, payout: payout.id, meter: meter.id, reading: reading.id,

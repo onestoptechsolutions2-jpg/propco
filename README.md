@@ -102,9 +102,20 @@ guest door codes, welcome message, turnover cleaning, occupancy and revenue).
 WhatsApp" logs a lead and opens WhatsApp to the provider. Platform admins manage
 partners and track leads and referral earnings at `/platform/partners`.
 
-Later phases (payroll, payroll,
-documents, reporting, analytics) build on this foundation without changing
-what's here.
+**Supplier invoices** (`/invoices`): enter a supplier's bill (optional 16% VAT,
+optional link to a repair), approve it (invoices above the company's approval
+limit, set under My team, need an admin), then pay it. Approving a repair-linked
+invoice sets the repair's cost so the owner is charged in their payout; paying it
+marks the repair paid so it can't be paid twice.
+
+**Payroll** (`/payroll`, admin only, paid plans): employees, monthly runs, PAYE /
+NSSF / SHIF / housing levy worked out automatically (rates are in
+`src/lib/payroll.ts`, labelled "2026, verify with KRA/NSSF/SHA before use"),
+bonuses and deductions on draft runs, approve to send payslips, mark each paid,
+printable payslips, and a "to pay the authorities" summary.
+
+Not built yet: a document/contract store (leases, agreements, e-signature) and
+scheduled/exported reports. Everything above builds on the same foundation.
 
 
 ## Stack

@@ -60,14 +60,14 @@ const LIST_PAGES = [
   "/dashboard", "/insights", "/properties", "/owners", "/tenants", "/leases", "/rent", "/rent/confirm",
   "/payouts", "/maintenance", "/maintenance/schedule", "/suppliers", "/supplier-payments", "/utilities",
   "/utilities/readings", "/utilities/meters/new", "/notifications", "/listings", "/stays", "/access",
-  "/services", "/billing", "/team", "/guide", "/properties/new", "/owners/new", "/tenants/new", "/suppliers/new", "/maintenance/new",
+  "/services", "/billing", "/team", "/guide", "/payroll", "/payroll/employees", "/invoices", "/properties/new", "/owners/new", "/tenants/new", "/suppliers/new", "/maintenance/new",
 ];
 
 const directPages = (o) => [
   `/properties/${o.property}`, `/properties/${o.property}/edit`, `/properties/${o.property}/units/new`,
   `/owners/${o.owner}`, `/owners/${o.owner}/edit`, `/tenants/${o.tenant}/edit`, `/tenants/${o.tenant}/reference`,
   `/suppliers/${o.supplier}/edit`, `/maintenance/${o.request}`, `/rent/${o.lease}`, `/rent/${o.lease}/invoice`,
-  `/rent/${o.lease}/receipt/${o.paid}`, `/leases/${o.lease}`, `/leases/${o.lease}/clearance`, `/payouts/${o.payout}/statement`,
+  `/rent/${o.lease}/receipt/${o.paid}`, `/payroll/employees/${o.employee}`, `/payroll/${o.run}`, `/payroll/${o.run}/payslip/${o.payslip}`, `/leases/${o.lease}`, `/leases/${o.lease}/clearance`, `/payouts/${o.payout}/statement`,
 ];
 
 async function actor(label, email, own, other, { staffLike }) {
@@ -143,7 +143,7 @@ async function main() {
       const r = await get(jar, p);
       if (r.text.includes(other)) fail(`${tag} owner-user`, p, `LEAK "${other}"`);
     }
-    for (const p of ["/owners", "/tenants", "/rent", "/suppliers", "/notifications", "/team", "/billing", "/utilities", "/stays", "/access", "/leases", "/rent/confirm", "/supplier-payments"]) {
+    for (const p of ["/owners", "/tenants", "/rent", "/suppliers", "/notifications", "/team", "/billing", "/utilities", "/stays", "/access", "/leases", "/rent/confirm", "/supplier-payments", "/payroll", "/payroll/employees", "/invoices"]) {
       checks++;
       const r = await get(jar, p);
       if (r.status === 200 && !r.redirect) fail(`${tag} owner-user`, p, "staff-only page opened by OWNER role");
@@ -158,6 +158,16 @@ async function main() {
       checks++;
       const r = await get(jar, p);
       if (r.status === 200) fail(`${tag} owner-user`, p, "OWNER role reached a staff-only page");
+    }
+  }
+
+  // STAFF (not admin) must not reach admin-only money pages.
+  for (const [tag, email] of [["ALPHA", "alpha-staff@test.local"], ["BRAVO", "bravo-staff@test.local"]]) {
+    const { jar } = await login(email);
+    for (const p of ["/payroll", "/payroll/employees", `/payroll/${ids[tag].run}`, "/team", "/billing"]) {
+      checks++;
+      const r = await get(jar, p);
+      if (r.status === 200 && !r.redirect) fail(`${tag} staff`, p, "admin-only page opened by STAFF role");
     }
   }
 

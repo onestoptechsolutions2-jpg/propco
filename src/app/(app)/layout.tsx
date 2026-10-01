@@ -53,6 +53,7 @@ const NAV: Group[] = [
     items: [
       // Landlords collect their own rent, so agency payouts don't apply to them.
       { href: "/payouts", label: "Owner payouts", roles: ["ADMIN", "STAFF", "OWNER"] },
+      { href: "/invoices", label: "Supplier invoices", hint: "Approve, then pay", roles: MANAGERS },
       { href: "/supplier-payments", label: "Pay suppliers", roles: STAFF },
     ],
   },
@@ -72,6 +73,7 @@ const NAV: Group[] = [
   {
     title: "Account",
     items: [
+      { href: "/payroll", label: "Payroll", hint: "Salaries and payslips", roles: ["ADMIN"] },
       { href: "/team", label: "My team", roles: ["ADMIN"] },
       { href: "/billing", label: "Plan & billing", roles: ["ADMIN"] },
     ],

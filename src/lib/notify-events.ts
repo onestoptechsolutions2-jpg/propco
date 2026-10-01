@@ -136,3 +136,40 @@ export async function notifySettlement(leaseId: string) {
     dedupeKey: `MOVE_OUT_SETTLED:${l.id}`,
   });
 }
+
+/** Employee: their payslip is ready. */
+export async function notifyPayslip(payslipId: string) {
+  const s = await prisma.payslip.findUnique({
+    where: { id: payslipId },
+    include: { employee: true, run: true },
+  });
+  if (!s) return;
+  const month = s.run.period.toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+  await notify(prisma, {
+    event: "PAYSLIP_ISSUED",
+    to: s.employee,
+    subject: `Your ${month} payslip`,
+    body: `Your payslip for ${month} is ready. Gross ${kes(s.gross)}, deductions ${kes(Number(s.gross) - Number(s.netPay))}, net pay ${kes(s.netPay)}.`,
+    dedupeKey: `PAYSLIP_ISSUED:${s.id}`,
+  });
+}
+
+/** Supplier: their invoice was approved / paid. */
+export async function notifyInvoice(invoiceId: string, what: "APPROVED" | "PAID" | "REJECTED") {
+  const inv = await prisma.supplierInvoice.findUnique({ where: { id: invoiceId }, include: { supplier: true } });
+  if (!inv) return;
+  const ref = inv.number ? `invoice ${inv.number}` : "your invoice";
+  const body =
+    what === "PAID"
+      ? `Payment of ${kes(inv.total)} for ${ref} has been sent${inv.payMethod ? ` via ${inv.payMethod}` : ""}${inv.payRef ? ` (ref ${inv.payRef})` : ""}.`
+      : what === "APPROVED"
+        ? `${ref[0].toUpperCase() + ref.slice(1)} for ${kes(inv.total)} has been approved and will be paid soon.`
+        : `${ref[0].toUpperCase() + ref.slice(1)} could not be approved${inv.reviewNote ? `: ${inv.reviewNote}` : ""}. Please contact us.`;
+  await notify(prisma, {
+    event: `INVOICE_${what}`,
+    to: inv.supplier,
+    subject: `Invoice ${what.toLowerCase()}`,
+    body,
+    dedupeKey: `INVOICE_${what}:${inv.id}`,
+  });
+}

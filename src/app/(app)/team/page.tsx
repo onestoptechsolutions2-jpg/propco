@@ -44,6 +44,7 @@ async function saveCompany(formData: FormData) {
     data: {
       name,
       payInstructions: String(formData.get("payInstructions") ?? "").trim().slice(0, 500) || null,
+      approvalLimit: Number(formData.get("approvalLimit")) > 0 ? Number(formData.get("approvalLimit")) : null,
     },
   });
   revalidatePath("/team");
@@ -89,6 +90,18 @@ export default async function TeamPage({
           placeholder="How tenants should pay, e.g. M-Pesa Paybill 123456, account: your unit number"
           className="rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink"
         />
+        <div>
+          <label className="mb-1 block text-xs text-muted">
+            Supplier invoices above this amount (KES) need an admin to approve. Leave empty for no limit.
+          </label>
+          <input
+            name="approvalLimit"
+            type="number"
+            min={0}
+            defaultValue={org.approvalLimit ? Number(org.approvalLimit) : undefined}
+            className="w-48 rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink"
+          />
+        </div>
         <button className="self-start rounded bg-ink px-5 py-2.5 text-sm font-medium text-white hover:bg-ink-light">
           Save company details
         </button>

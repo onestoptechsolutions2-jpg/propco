@@ -36,6 +36,10 @@ async function snapshot(tag: string) {
     supplierState: JSON.stringify(await prisma.supplier.findMany({ where: { orgId: o.org }, orderBy: { id: "asc" }, select: { id: true, name: true } })),
     notifications: await prisma.notification.count({ where: { orgId: o.org } }),
     users: await prisma.user.count({ where: { orgId: o.org } }),
+    employeeState: JSON.stringify(await prisma.employee.findMany({ where: { orgId: o.org }, orderBy: { id: "asc" }, select: { id: true, name: true, basicSalary: true, active: true } })),
+    runState: JSON.stringify(await prisma.payrollRun.findMany({ where: { orgId: o.org }, orderBy: { id: "asc" }, select: { id: true, status: true } })),
+    payslipState: JSON.stringify(await prisma.payslip.findMany({ where: { run: { orgId: o.org } }, orderBy: { id: "asc" }, select: { id: true, netPay: true, paidAt: true, extraEarnings: true } })),
+    invoiceState: JSON.stringify(await prisma.supplierInvoice.findMany({ where: { orgId: o.org }, orderBy: { id: "asc" }, select: { id: true, status: true, total: true, requestId: true } })),
     org: JSON.stringify(await prisma.organization.findUnique({ where: { id: o.org }, select: { name: true, plan: true, paidUntil: true, payInstructions: true, contactPhone: true, billingNote: true } })),
   };
 }
