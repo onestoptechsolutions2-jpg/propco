@@ -40,9 +40,20 @@ async function extendTrial(orgId: string) {
   revalidatePath("/platform");
 }
 
-export default async function PlatformPage() {
+export default async function PlatformPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string | string[]; status?: string | string[] }>;
+}) {
   const user = await requireUser();
   if (!isPlatformAdmin(user.email)) notFound();
+
+  const params = await searchParams;
+  const query = typeof params.q === "string" ? params.q.trim().toLowerCase() : "";
+  const requestedStatus = typeof params.status === "string" ? params.status : "all";
+  const selectedStatus = ["all", "trial", "paying", "lapsed", "free"].includes(requestedStatus)
+    ? requestedStatus
+    : "all";
 
   const orgs = await prisma.organization.findMany({
     orderBy: { createdAt: "desc" },
@@ -61,11 +72,22 @@ export default async function PlatformPage() {
   const mrr = orgs.reduce((sum, o) => (orgStatus(o, now).subscribed ? sum + PLANS[o.plan].priceKes : sum), 0);
   const paying = orgs.filter((o) => orgStatus(o, now).subscribed).length;
   const trials = orgs.filter((o) => orgStatus(o, now).inTrial).length;
+  const filteredOrgs = orgs.filter((org) => {
+    const status = orgStatus(org, now);
+    const matchesQuery = !query || org.name.toLowerCase().includes(query) || org.id.toLowerCase().includes(query);
+    const matchesStatus =
+      selectedStatus === "all" ||
+      (selectedStatus === "trial" && status.inTrial) ||
+      (selectedStatus === "paying" && !status.inTrial && status.subscribed) ||
+      (selectedStatus === "lapsed" && status.lapsed) ||
+      (selectedStatus === "free" && !status.inTrial && !status.subscribed && !status.lapsed);
+    return matchesQuery && matchesStatus;
+  });
 
   return (
     <div>
-      <h1 className="font-serif text-3xl text-ink">Platform</h1>
-      <p className="mt-1 text-sm text-muted">All customer companies. Visible only to platform admins.</p>
+      <h1 className="font-serif text-3xl text-ink">SaaS clients</h1>
+      <p className="mt-1 text-sm text-muted">Client organizations, subscriptions and trials.</p>
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
@@ -81,7 +103,36 @@ export default async function PlatformPage() {
         ))}
       </div>
 
-      <div className="mt-8 overflow-hidden rounded-lg border border-border bg-surface">
+      <form action="/platform" method="get" className="mt-8 flex flex-wrap items-end gap-3">
+        <label className="min-w-56 flex-1 text-xs font-medium text-muted">
+          Search clients
+          <input
+            type="search"
+            name="q"
+            defaultValue={typeof params.q === "string" ? params.q : ""}
+            placeholder="Company name or ID"
+            className="mt-1.5 w-full rounded border border-border bg-surface px-3 py-2 text-sm text-foreground"
+          />
+        </label>
+        <label className="text-xs font-medium text-muted">
+          Subscription status
+          <select
+            name="status"
+            defaultValue={selectedStatus}
+            className="mt-1.5 block min-w-40 rounded border border-border bg-surface px-3 py-2 text-sm text-foreground"
+          >
+            <option value="all">All statuses</option>
+            <option value="trial">On trial</option>
+            <option value="paying">Paying</option>
+            <option value="lapsed">Lapsed</option>
+            <option value="free">Free</option>
+          </select>
+        </label>
+        <button className="rounded bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink-light">Filter</button>
+      </form>
+
+      <p className="mb-2 mt-4 text-xs text-muted">Showing {filteredOrgs.length} of {orgs.length} clients</p>
+      <div className="overflow-hidden rounded-lg border border-border bg-surface">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-left text-sm">
             <thead className="bg-background text-xs uppercase tracking-wide text-muted">
@@ -93,7 +144,7 @@ export default async function PlatformPage() {
               </tr>
             </thead>
             <tbody>
-              {orgs.map((o) => {
+              {filteredOrgs.map((o) => {
                 const st = orgStatus(o, now);
                 return (
                   <tr key={o.id} className="border-t border-border align-top">
@@ -145,6 +196,13 @@ export default async function PlatformPage() {
                   </tr>
                 );
               })}
+              {filteredOrgs.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-muted">
+                    No clients match these filters.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

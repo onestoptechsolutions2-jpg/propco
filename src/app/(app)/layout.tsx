@@ -109,7 +109,10 @@ export default async function AppLayout({
   const overLimit = status.maxUnits !== Infinity && unitCount >= status.maxUnits;
 
   const nav: Group[] = isPlatformAdmin(user.email)
-    ? [...NAV, { title: "Platform", items: [{ href: "/platform", label: "All companies" }, { href: "/platform/partners", label: "Service partners" }] }]
+    ? [
+        { title: "SaaS admin", items: [{ href: "/platform", label: "Client companies" }, { href: "/platform/partners", label: "Service partners" }] },
+        ...NAV,
+      ]
     : NAV;
 
   // Phone bottom bar: four big buttons for the daily jobs, plus "More" for the rest.
