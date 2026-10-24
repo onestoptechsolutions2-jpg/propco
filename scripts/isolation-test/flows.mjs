@@ -54,7 +54,7 @@ async function submit(path, match, fields = {}, within = null) {
   try {
     res = await raw(path, { method: "POST", body: fd });
     await res.text();
-  } catch (e) {
+  } catch {
     // The server may drop the connection when an action redirects; retry the read once.
     console.log("   (connection reset after POST to " + path + "; continuing)");
     return 0;

@@ -72,7 +72,6 @@ const directPages = (o) => [
 
 async function actor(label, email, own, other, { staffLike }) {
   const { jar } = await login(email);
-  const me = own === "ALPHA" ? "ALPHA" : "BRAVO";
   const them = other;
 
   // 1) list pages must never contain the other company's marker
@@ -109,7 +108,7 @@ async function actor(label, email, own, other, { staffLike }) {
 }
 
 async function main() {
-  const A = ids.ALPHA, B = ids.BRAVO;
+  const A = ids.ALPHA;
 
   // Sanity: users can see their OWN data (so a pass isn't vacuous).
   for (const [tag, email] of [["ALPHA", "alpha-admin@test.local"], ["BRAVO", "bravo-admin@test.local"]]) {
