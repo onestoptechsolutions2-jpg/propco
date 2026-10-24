@@ -50,6 +50,7 @@ const NAV: Group[] = [
       { href: "/payouts", label: "Owner payouts", perm: "payouts.view" },
       { href: "/invoices", label: "Supplier invoices", hint: "Approve, then pay", perm: "invoices.manage" },
       { href: "/supplier-payments", label: "Pay suppliers", perm: "supplier_payments.manage" },
+      { href: "/books", label: "Books", hint: "Cash book and profit", perm: "books.manage" },
     ],
   },
   {

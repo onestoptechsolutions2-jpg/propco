@@ -35,6 +35,7 @@ export const PERMISSION_GROUPS: { title: string; items: { key: string; label: st
       { key: "invoices.approve_large", label: "Approve invoices above the company limit" },
       { key: "supplier_payments.manage", label: "Pay suppliers for completed jobs" },
       { key: "payroll.manage", label: "Payroll (salaries, payslips)", hint: "Sensitive" },
+      { key: "books.manage", label: "Books: cash book, expenses and profit report", hint: "Sensitive" },
     ],
   },
   {
@@ -64,7 +65,7 @@ export const PERMISSION_LABEL: Record<string, string> = Object.fromEntries(
 );
 
 const STAFF_DEFAULT = ALL_PERMISSIONS.filter(
-  (p) => !["payroll.manage", "team.manage", "billing.manage"].includes(p)
+  (p) => !["payroll.manage", "books.manage", "team.manage", "billing.manage"].includes(p)
 ).filter((p) => p !== "invoices.approve_large");
 
 const LANDLORD_DEFAULT = [
