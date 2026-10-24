@@ -476,6 +476,7 @@ model Organization {
   employees     Employee[]
   payrollRuns   PayrollRun[]
   ledgerEntries LedgerEntry[]
+  chatMessages  ChatMessage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -967,4 +968,24 @@ model LedgerEntry {
   createdAt   DateTime @default(now())
 
   @@index([orgId, date])
+}
+
+// ---------- Chat assistant ----------
+
+// One bubble in a user's private conversation with the app. `data` holds the
+// tap-to-confirm choices (options) and links the app offered; see src/lib/chat.ts.
+model ChatMessage {
+  id       String  @id @default(cuid())
+  fromApp  Boolean @default(false)
+  text     String
+  data     Json?
+  resolved Boolean @default(false)
+
+  org    Organization @relation(fields: [orgId], references: [id])
+  orgId  String
+  userId String
+
+  createdAt DateTime @default(now())
+
+  @@index([orgId, userId, createdAt])
 }
