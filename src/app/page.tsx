@@ -14,7 +14,7 @@ const FEATURES = [
 
 export default async function Home() {
   const session = await auth();
-  if (session?.user) redirect("/dashboard");
+  if (session?.user) redirect("/chat");
 
   return (
     <div className="min-h-screen bg-background text-foreground">

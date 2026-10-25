@@ -7,6 +7,9 @@ import { whatsappLink } from "@/lib/whatsapp";
 export type ChatOption =
   | { type: "RENT"; label: string; leaseId: string; paymentId?: string; amount: number; method: "MPESA" | "CASH" | "BANK"; reference?: string }
   | { type: "REPAIR"; label: string; unitId: string; description: string }
+  | { type: "TENANT"; label: string; name: string; phone?: string }
+  | { type: "MOVE_IN"; label: string; tenantId: string; unitId: string; rent: number; deposit?: number }
+  | { type: "INVOICE"; label: string; supplierId: string; amount: number; description: string; requestId?: string }
   | { type: "EXPENSE"; label: string; kind: "IN" | "OUT"; amount: number; category: string; note: string };
 
 export type ChatLink = { label: string; href: string };
@@ -97,6 +100,89 @@ export async function interpret(user: AccessUser, textRaw: string): Promise<Chat
     const inn = lines.filter((l) => l.kind === "IN").reduce((s, l) => s + l.amount, 0);
     const out = lines.filter((l) => l.kind === "OUT").reduce((s, l) => s + l.amount, 0);
     return { text: `This month so far:\n• Money in ${KES(inn)}\n• Money out ${KES(out)}\n• ${inn - out >= 0 ? "Profit" : "Loss"} ${KES(Math.abs(inn - out))}`, data: { links: [{ label: "Open books", href: "/books" }] } };
+  }
+
+  // "Add tenant Jane Wanjiru 0712345678"
+  if (/^\s*(add|new|create|register)\s+(a\s+)?(new\s+)?tenant\b/i.test(text)) {
+    if (!user.can("tenants.manage")) return { text: "You don't have access to add tenants." };
+    const phone = text.match(/(?:\+?254|0)\d{9}\b/)?.[0];
+    const name = text.replace(/^\s*(add|new|create|register)\s+(a\s+)?(new\s+)?tenant\b/i, "").replace(phone ?? "", "").replace(/\s+/g, " ").trim();
+    if (name.length < 2) return { text: 'What is the tenant\'s name? e.g. "Add tenant Jane Wanjiru 0712345678"' };
+    return {
+      text: `Add ${name}${phone ? ` (${phone})` : ""} as a tenant?`,
+      data: { options: [{ type: "TENANT", label: `Add ${name}`, name: name.slice(0, 100), phone }] },
+    };
+  }
+
+  // "Move Jane into 4B rent 15000 deposit 15000"
+  if (/\bmove[sd]?\b.*\b(in|into)\b|\bmoving\s+(in|into)\b/i.test(text)) {
+    if (!user.can("tenants.manage")) return { text: "You don't have access to move tenants in." };
+    const [tenants, units] = await Promise.all([
+      prisma.tenant.findMany({ where: { orgId: user.orgId } }),
+      prisma.unit.findMany({ where: { status: "VACANT", property: ownerScopeFilter(user) }, include: { property: true } }),
+    ]);
+    const t = " " + norm(text) + " ";
+    const tenant = tenants
+      .map((x) => ({ x, score: norm(x.name).split(" ").filter((w) => w.length >= 3 && t.includes(" " + w + " ")).length }))
+      .filter((s) => s.score > 0)
+      .sort((a, b) => b.score - a.score)[0]?.x;
+    if (!tenant) return { text: 'I couldn\'t find that tenant. Add them first: "Add tenant Jane Wanjiru 0712345678".' };
+    const unitMatches = units.filter((u) => {
+      const label = norm(u.label).replace(/^unit /, "");
+      return label && (t.includes(" " + norm(u.label) + " ") || t.includes(" unit " + label + " ") || t.includes(" " + label + " "));
+    });
+    if (unitMatches.length === 0) return { text: `I couldn't find a vacant unit in your message. Which unit is ${tenant.name} moving into?` };
+    const money = (re: RegExp) => {
+      const m = text.match(re);
+      if (!m) return undefined;
+      const n = parseFloat(m[1].replace(/,/g, "")) * (m[2] ? 1000 : 1);
+      return n > 0 ? n : undefined;
+    };
+    const rentSaid = money(/\brent\s*(?:of|is|at|:)?\s*(\d[\d,]*(?:\.\d+)?)\s*(k)?\b/i);
+    const deposit = money(/\bdeposit\s*(?:of|is|at|:)?\s*(\d[\d,]*(?:\.\d+)?)\s*(k)?\b/i);
+    return {
+      text: unitMatches.length === 1 ? `Move ${tenant.name} in?` : "Which unit?",
+      data: {
+        options: unitMatches.slice(0, 4).map((u) => {
+          const rent = rentSaid ?? Number(u.rentAmount);
+          return {
+            type: "MOVE_IN" as const,
+            label: `${tenant.name} → ${u.property.name} ${u.label} · rent ${KES(rent)}${deposit ? ` · deposit ${KES(deposit)}` : ""}`,
+            tenantId: tenant.id,
+            unitId: u.id,
+            rent,
+            deposit,
+          };
+        }),
+      },
+    };
+  }
+
+  // "Invoice from Joe 4500 unit 4B plumbing"
+  if (/\binvoice\b/i.test(text) && amountMatch) {
+    if (!user.can("invoices.manage")) return { text: "You don't have access to supplier invoices." };
+    if (user.role === "LANDLORD") return { text: "Landlords attach invoices to a repair. Open Supplier invoices for that." };
+    const suppliers = await prisma.supplier.findMany({ where: { orgId: user.orgId } });
+    const t = " " + norm(text) + " ";
+    const found = suppliers
+      .map((x) => ({ x, score: norm(x.name).split(" ").filter((w) => w.length >= 3 && t.includes(" " + w + " ")).length }))
+      .filter((s) => s.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 4);
+    if (found.length === 0) return { text: "I couldn't tell which supplier. Include their name as saved under Suppliers." };
+    const description = amountMatch.note.replace(/\binvoice\b/i, "").replace(/\s+/g, " ").trim() || "Supplier invoice";
+    return {
+      text: found.length === 1 ? "Add this supplier invoice for approval?" : "Which supplier?",
+      data: {
+        options: found.map((f) => ({
+          type: "INVOICE" as const,
+          label: `${f.x.name} · ${KES(amountMatch.amount)}`,
+          supplierId: f.x.id,
+          amount: amountMatch.amount,
+          description: description.slice(0, 200),
+        })),
+      },
+    };
   }
 
   const leases = await activeLeases(user);

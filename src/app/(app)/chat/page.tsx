@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/access";
 import { recentChat, HELP, type ChatData } from "@/lib/chat";
 import { ScrollToEnd } from "@/components/ScrollToEnd";
@@ -7,6 +8,7 @@ const SUGGESTIONS = ["Who owes rent?", "How are we doing this month?", "Help"];
 
 export default async function ChatPage() {
   const user = await requireUser();
+  if (user.role === "OWNER") redirect("/dashboard"); // owners have read-only access, nothing to chat about
   const messages = await recentChat(user.orgId, user.id!);
   const lastApp = [...messages].reverse().find((m) => m.fromApp);
 

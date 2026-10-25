@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireUser, requirePermission, canManageOwnerRecords } from "@/lib/access";
+import { requireUser, requirePermission, canManageOwnerRecords, ownerScopeFilter } from "@/lib/access";
 import { audit } from "@/lib/audit";
 import { interpret, type ChatData, type ChatOption } from "@/lib/chat";
 import { notifyPaymentReceived } from "@/lib/notify-events";
@@ -110,6 +110,46 @@ async function execute(user: U, opt: ChatOption): Promise<string> {
     });
     await audit(user, "repair.create", `${unit.label} via chat`);
     return `✓ Repair logged for ${unit.property.name} ${unit.label}. Open it at /maintenance/${req.id} to assign a supplier.`;
+  }
+
+  if (opt.type === "TENANT") {
+    await requirePermission("tenants.manage");
+    const name = opt.name.trim().slice(0, 100);
+    if (!name) throw new Error("name is missing");
+    const t = await prisma.tenant.create({ data: { orgId: user.orgId, name, phone: opt.phone } });
+    await audit(user, "tenant.create", `${name} via chat`);
+    return `✓ Added ${t.name}. Say "Move ${t.name.split(" ")[0]} into 4B" when they are ready to move in.`;
+  }
+
+  if (opt.type === "MOVE_IN") {
+    await requirePermission("tenants.manage");
+    const [tenant, unit] = await Promise.all([
+      prisma.tenant.findFirst({ where: { id: opt.tenantId, orgId: user.orgId } }),
+      prisma.unit.findFirst({ where: { id: opt.unitId, status: "VACANT", property: ownerScopeFilter(user) }, include: { property: true } }),
+    ]);
+    if (!tenant || !unit) throw new Error("that unit is no longer vacant or isn't available to you");
+    if (!(opt.rent >= 0)) throw new Error("invalid rent");
+    const [lease] = await prisma.$transaction([
+      prisma.lease.create({
+        data: { unitId: unit.id, tenantId: tenant.id, startDate: new Date(), rentAmount: opt.rent, depositAmount: opt.deposit },
+      }),
+      prisma.unit.update({ where: { id: unit.id }, data: { status: "OCCUPIED" } }),
+    ]);
+    await audit(user, "lease.create", `${tenant.name} → ${unit.label} via chat`);
+    return `✓ ${tenant.name} is now in ${unit.property.name} ${unit.label} at ${KES(opt.rent)}/month. Finish the move-in checklist at /leases/${lease.id}.`;
+  }
+
+  if (opt.type === "INVOICE") {
+    const u = await requirePermission("invoices.manage");
+    if (u.role === "LANDLORD") throw new Error("attach landlord invoices to a repair on the invoices page");
+    const supplier = await prisma.supplier.findFirst({ where: { id: opt.supplierId, orgId: user.orgId } });
+    if (!supplier) throw new Error("unknown supplier");
+    if (!(opt.amount > 0)) throw new Error("invalid amount");
+    await prisma.supplierInvoice.create({
+      data: { orgId: user.orgId, supplierId: supplier.id, description: opt.description || "Supplier invoice", amount: opt.amount, total: opt.amount },
+    });
+    await audit(user, "invoice.create", `${supplier.name} ${KES(opt.amount)} via chat`);
+    return `✓ Invoice from ${supplier.name} for ${KES(opt.amount)} added. It's waiting for approval under Supplier invoices.`;
   }
 
   await requirePermission("books.manage");
