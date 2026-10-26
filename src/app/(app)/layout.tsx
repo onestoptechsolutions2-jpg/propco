@@ -15,6 +15,7 @@ const NAV: Group[] = [
   {
     items: [
       { href: "/dashboard", label: "Home" },
+      { href: "/chat", label: "Chat", hint: "Just tell me what happened" },
       { href: "/insights", label: "Insights", hint: "How you are performing" },
       { href: "/guide", label: "Step-by-step guides", hint: "Not sure where to start?" },
     ],
@@ -50,6 +51,7 @@ const NAV: Group[] = [
       { href: "/payouts", label: "Owner payouts", perm: "payouts.view" },
       { href: "/invoices", label: "Supplier invoices", hint: "Approve, then pay", perm: "invoices.manage" },
       { href: "/supplier-payments", label: "Pay suppliers", perm: "supplier_payments.manage" },
+      { href: "/books", label: "Books", hint: "Cash book and profit", perm: "books.manage" },
     ],
   },
   {
@@ -126,8 +128,8 @@ export default async function AppLayout({
         ]
       : [
           { href: "/dashboard", label: "Home", icon: "home" },
+          { href: "/chat", label: "Chat", icon: "chat" },
           ...(canRent ? [{ href: "/rent", label: "Rent", icon: "cash" as const, badge: proofsWaiting }] : []),
-          { href: "/maintenance", label: "Repairs", icon: "wrench" },
           ...(canMessages
             ? [{ href: "/notifications", label: "Messages", icon: "chat" as const, badge: whatsappWaiting }]
             : user.can("tenants.manage")

@@ -5,7 +5,7 @@ import Link from "next/link";
 
 async function googleSignIn(formData: FormData) {
   "use server";
-  const callbackUrl = (formData.get("callbackUrl") as string) || "/dashboard";
+  const callbackUrl = (formData.get("callbackUrl") as string) || "/chat";
   try {
     await signIn("google", { redirectTo: callbackUrl });
   } catch (error) {
@@ -18,7 +18,7 @@ async function googleSignIn(formData: FormData) {
 
 async function credentialsSignIn(formData: FormData) {
   "use server";
-  const callbackUrl = (formData.get("callbackUrl") as string) || "/dashboard";
+  const callbackUrl = (formData.get("callbackUrl") as string) || "/chat";
   try {
     await signIn("credentials", {
       email: formData.get("email"),
@@ -39,7 +39,7 @@ export default async function LoginPage({
   searchParams: Promise<{ callbackUrl?: string; error?: string }>;
 }) {
   const params = await searchParams;
-  const callbackUrl = params.callbackUrl ?? "/dashboard";
+  const callbackUrl = params.callbackUrl ?? "/chat";
   // Only offer Google when credentials are configured; otherwise Google itself
   // shows "invalid_client" after the redirect.
   const googleEnabled = !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET;

@@ -475,6 +475,8 @@ model Organization {
   roles         OrgRole[]
   employees     Employee[]
   payrollRuns   PayrollRun[]
+  ledgerEntries LedgerEntry[]
+  chatMessages  ChatMessage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -937,4 +939,53 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@index([orgId, createdAt])
+}
+
+// ---------- Bookkeeping ----------
+
+enum LedgerKind {
+  IN
+  OUT
+}
+
+// A cash-book entry the user typed in (money in / money out that the app does
+// not already know about). Rent, supplier invoices, payroll and owner payouts
+// are read straight from their own tables by src/lib/books.ts, so they are
+// never entered twice.
+model LedgerEntry {
+  id       String     @id @default(cuid())
+  kind     LedgerKind
+  amount   Decimal    @db.Decimal(12, 2)
+  category String
+  note     String?
+  method   String? // "MPESA" | "BANK" | "CASH"
+  date     DateTime   @default(now())
+
+  org   Organization @relation(fields: [orgId], references: [id])
+  orgId String
+
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([orgId, date])
+}
+
+// ---------- Chat assistant ----------
+
+// One bubble in a user's private conversation with the app. `data` holds the
+// tap-to-confirm choices (options) and links the app offered; see src/lib/chat.ts.
+model ChatMessage {
+  id       String  @id @default(cuid())
+  fromApp  Boolean @default(false)
+  text     String
+  data     Json?
+  resolved Boolean @default(false)
+
+  org    Organization @relation(fields: [orgId], references: [id])
+  orgId  String
+  userId String
+
+  createdAt DateTime @default(now())
+
+  @@index([orgId, userId, createdAt])
 }
