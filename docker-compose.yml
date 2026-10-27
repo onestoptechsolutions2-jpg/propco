@@ -29,6 +29,13 @@ services:
       - "3010:3000"
     volumes:
       - propco_app_data:/app/data
+    healthcheck:
+      # /api/health also checks the database. node:slim has no curl/wget.
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
 
   # Background worker: runs scripts/worker.ts, which each day (00:05 server
   # time, and once on boot) creates a PENDING rent payment for every active
@@ -52,6 +59,35 @@ services:
       # case the worker ever needs to verify signed sessions/JWTs itself.
       - propco_app_data:/app/data
 
+  # Nightly database backup: a compressed pg_dump every 24 hours into the
+  # propco_backups volume, keeping the last 14 days. A dump that is empty or
+  # fails is discarded and the previous good backup is kept.
+  # Restore:  gunzip -c propco-YYYY-MM-DD.sql.gz | psql -h db -U propco propco
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: propco
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - propco_backups:/backups
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          f=/backups/propco-$$(date +%F).sql.gz
+          if pg_dump -h db -U propco propco | gzip > "$$f.tmp" && [ "$$(gzip -dc "$$f.tmp" | wc -c)" -gt 1000 ]; then
+            mv "$$f.tmp" "$$f" && echo "backup ok: $$f"
+          else
+            rm -f "$$f.tmp"; echo "backup FAILED" >&2
+          fi
+          find /backups -name 'propco-*.sql.gz' -mtime +14 -delete
+          sleep 86400
+        done
+
 volumes:
+  propco_backups:
   propco_db_data:
   propco_app_data:

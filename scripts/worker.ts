@@ -22,26 +22,30 @@ async function generateMonthlyPayments() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-  const leases = await prisma.lease.findMany({ where: { status: "ACTIVE" } });
+  // Two queries plus batched inserts, however many leases there are.
+  const leases = await prisma.lease.findMany({
+    where: { status: "ACTIVE" },
+    select: { id: true, startDate: true, rentAmount: true },
+  });
+  const already = await prisma.payment.findMany({
+    where: { dueDate: { gte: monthStart, lte: monthEnd }, lease: { status: "ACTIVE" } },
+    select: { leaseId: true },
+  });
+  const have = new Set(already.map((p) => p.leaseId));
+
+  const rows = leases
+    .filter((lease) => !have.has(lease.id))
+    .map((lease) => ({
+      leaseId: lease.id,
+      amount: lease.rentAmount,
+      dueDate: new Date(now.getFullYear(), now.getMonth(), Math.min(lease.startDate.getDate(), 28)),
+      status: "PENDING" as const,
+      method: "MPESA" as const,
+    }));
+
   let created = 0;
-
-  for (const lease of leases) {
-    const existing = await prisma.payment.findFirst({
-      where: { leaseId: lease.id, dueDate: { gte: monthStart, lte: monthEnd } },
-    });
-    if (existing) continue;
-
-    const dueDay = Math.min(lease.startDate.getDate(), 28);
-    await prisma.payment.create({
-      data: {
-        leaseId: lease.id,
-        amount: lease.rentAmount,
-        dueDate: new Date(now.getFullYear(), now.getMonth(), dueDay),
-        status: "PENDING",
-        method: "MPESA",
-      },
-    });
-    created++;
+  for (let i = 0; i < rows.length; i += 500) {
+    created += (await prisma.payment.createMany({ data: rows.slice(i, i + 500) })).count;
   }
 
   if (created > 0) console.log(`[worker] created ${created} pending payment(s)`);
@@ -190,15 +194,36 @@ async function notifySubscriptionExpiry() {
   }
 }
 
+/**
+ * Run `fn` only if no other worker holds the Postgres advisory lock `key`.
+ * The lock lives on a transaction of its own (released automatically if this
+ * process dies) while `fn` uses normal connections. Returns false if skipped.
+ */
+async function withLock(key: number, fn: () => Promise<void>): Promise<boolean> {
+  return prisma.$transaction(
+    async (tx) => {
+      const [{ ok }] = await tx.$queryRaw<{ ok: boolean }[]>`SELECT pg_try_advisory_xact_lock(${key}) AS ok`;
+      if (!ok) return false;
+      await fn();
+      return true;
+    },
+    { timeout: 30 * 60_000, maxWait: 10_000 }
+  );
+}
+
+const DAILY_JOB_LOCK = 727401;
+
 async function runDailyJob(): Promise<boolean> {
   console.log(`[worker] daily job starting at ${new Date().toISOString()}`);
   try {
-    await generateMonthlyPayments();
-    await flagLatePayments();
-    await sendRentReminders();
-    await notifyExpiringLeases();
-    await notifySubscriptionExpiry();
-    console.log("[worker] daily job finished");
+    const ran = await withLock(DAILY_JOB_LOCK, async () => {
+      await generateMonthlyPayments();
+      await flagLatePayments();
+      await sendRentReminders();
+      await notifyExpiringLeases();
+      await notifySubscriptionExpiry();
+    });
+    console.log(ran ? "[worker] daily job finished" : "[worker] daily job already running elsewhere; skipped");
     return true;
   } catch (error) {
     console.error("[worker] daily job failed:", error);
@@ -230,7 +255,7 @@ cron.schedule("5 0 * * *", () => void runDailyJob());
 // Deliver queued notifications every minute.
 cron.schedule("* * * * *", () => {
   dispatchQueued(prisma).then(
-    (c) => c.sent + c.failed + c.skipped > 0 && console.log("[worker] notifications:", c),
+    (c) => c.sent + c.failed + c.skipped + c.retrying > 0 && console.log("[worker] notifications:", c),
     (e) => console.error("[worker] dispatch failed:", e)
   );
 });

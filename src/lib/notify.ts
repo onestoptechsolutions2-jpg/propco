@@ -70,6 +70,7 @@ async function send(channel: NotifyChannel, to: string, subject: string, body: s
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({ from, to, subject, text: body }),
+      signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
     });
     if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);
     return "sent" as const;
@@ -85,6 +86,7 @@ async function send(channel: NotifyChannel, to: string, subject: string, body: s
       method: "POST",
       headers: { apiKey, Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
       body: form,
+      signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
     });
     if (!res.ok) throw new Error(`Africa's Talking ${res.status}: ${await res.text()}`);
     return "sent" as const;
@@ -92,34 +94,71 @@ async function send(channel: NotifyChannel, to: string, subject: string, body: s
   return "skip" as const; // WHATSAPP: not wired up
 }
 
-/** Deliver up to `limit` QUEUED notifications. Returns counts. */
+const MAX_ATTEMPTS = 5;
+const STALE_CLAIM_MS = 10 * 60 * 1000;
+const SEND_TIMEOUT_MS = 15_000;
+
+/**
+ * Deliver up to `limit` due QUEUED notifications. Safe to run from several
+ * processes at once: each row is claimed (QUEUED -> SENDING) before sending, so
+ * it is sent once. A failed send is retried with exponential backoff (1, 2, 4,
+ * 8 minutes) and only becomes FAILED after MAX_ATTEMPTS. A claim left behind
+ * by a crashed dispatcher is released after 10 minutes. Returns counts.
+ */
 export async function dispatchQueued(db: Pick<PrismaClient, "notification">, limit = 100) {
+  const now = new Date();
+  await db.notification.updateMany({
+    where: { status: "SENDING", lockedAt: { lt: new Date(now.getTime() - STALE_CLAIM_MS) } },
+    data: { status: "QUEUED", lockedAt: null },
+  });
+
   const rows = await db.notification.findMany({
-    where: { status: "QUEUED", channel: { not: "WHATSAPP" } },
+    where: {
+      status: "QUEUED",
+      channel: { not: "WHATSAPP" },
+      OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
+    },
     orderBy: { createdAt: "asc" },
     take: limit,
   });
-  const counts = { sent: 0, failed: 0, skipped: 0 };
+  const counts = { sent: 0, failed: 0, skipped: 0, retrying: 0 };
 
   for (const row of rows) {
+    const claimed = await db.notification.updateMany({
+      where: { id: row.id, status: "QUEUED" },
+      data: { status: "SENDING", lockedAt: new Date() },
+    });
+    if (claimed.count === 0) continue; // another dispatcher got it
+
     try {
       const result = await send(row.channel, row.recipient!, row.subject, row.body);
       if (result === "sent") {
-        await db.notification.update({ where: { id: row.id }, data: { status: "SENT", sentAt: new Date() } });
+        await db.notification.update({
+          where: { id: row.id },
+          data: { status: "SENT", sentAt: new Date(), lockedAt: null, error: null },
+        });
         counts.sent++;
       } else {
         await db.notification.update({
           where: { id: row.id },
-          data: { status: "SKIPPED", error: `No ${row.channel} provider configured` },
+          data: { status: "SKIPPED", lockedAt: null, error: `No ${row.channel} provider configured` },
         });
         counts.skipped++;
       }
     } catch (e) {
-      await db.notification.update({
-        where: { id: row.id },
-        data: { status: "FAILED", error: e instanceof Error ? e.message.slice(0, 500) : "Unknown error" },
-      });
-      counts.failed++;
+      const attempts = row.attempts + 1;
+      const error = e instanceof Error ? e.message.slice(0, 500) : "Unknown error";
+      if (attempts >= MAX_ATTEMPTS) {
+        await db.notification.update({ where: { id: row.id }, data: { status: "FAILED", attempts, lockedAt: null, error } });
+        counts.failed++;
+      } else {
+        const delayMs = 2 ** (attempts - 1) * 60_000;
+        await db.notification.update({
+          where: { id: row.id },
+          data: { status: "QUEUED", attempts, lockedAt: null, error, nextAttemptAt: new Date(Date.now() + delayMs) },
+        });
+        counts.retrying++;
+      }
     }
   }
   return counts;

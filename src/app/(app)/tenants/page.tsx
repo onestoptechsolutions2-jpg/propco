@@ -1,15 +1,22 @@
 import Link from "next/link";
 import { requirePermission } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
+import { Pager } from "@/components/Pager";
+import { pageArgs, pageNumber } from "@/lib/paging";
 
-export default async function TenantsPage() {
+export default async function TenantsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const user = await requirePermission("tenants.manage");
+  const page = pageNumber((await searchParams).page);
 
-  const tenants = await prisma.tenant.findMany({
-    where: { orgId: user.orgId },
-    include: { leases: { where: { status: "ACTIVE" }, include: { unit: { include: { property: true } } } } },
-    orderBy: { createdAt: "desc" },
-  });
+  const [tenants, total] = await Promise.all([
+    prisma.tenant.findMany({
+      where: { orgId: user.orgId },
+      include: { leases: { where: { status: "ACTIVE" }, include: { unit: { include: { property: true } } } } },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      ...pageArgs(page),
+    }),
+    prisma.tenant.count({ where: { orgId: user.orgId } }),
+  ]);
 
   return (
     <div>
@@ -17,7 +24,7 @@ export default async function TenantsPage() {
         <div>
           <h1 className="font-serif text-3xl text-ink">Tenants</h1>
           <p className="mt-1 text-sm text-muted">
-            {tenants.length} {tenants.length === 1 ? "tenant" : "tenants"} on file
+            {total} {total === 1 ? "tenant" : "tenants"} on file
           </p>
         </div>
         <div className="flex gap-2">
@@ -77,6 +84,7 @@ export default async function TenantsPage() {
         </table>
         </div>
       </div>
+      <Pager basePath="/tenants" page={page} total={total} />
     </div>
   );
 }

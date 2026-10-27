@@ -9,6 +9,7 @@ const badge: Record<string, string> = {
   QUEUED: "bg-ink-light/10 text-ink",
   FAILED: "bg-red-100 text-red-700",
   SKIPPED: "bg-background text-muted",
+  SENDING: "bg-ink-light/10 text-ink",
 };
 
 export default async function NotificationsPage() {

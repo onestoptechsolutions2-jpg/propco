@@ -247,6 +247,7 @@ model Lease {
 
   @@index([unitId])
   @@index([tenantId])
+  @@index([status])
 }
 
 // ---------- Rent collection (Phase 2) ----------
@@ -286,6 +287,8 @@ model Payment {
 
   @@index([leaseId])
   @@index([dueDate])
+  @@index([status, dueDate]) // late flags, reminders, arrears
+  @@index([status, paidDate]) // books and statements by month
 }
 
 // ---------- Owner payouts (Phase 3) ----------
@@ -396,6 +399,7 @@ model MaintenanceRequest {
 
   @@index([unitId])
   @@index([supplierId])
+  @@index([status])
 }
 
 // ---------- Notifications (Phase 5) ----------
@@ -411,6 +415,7 @@ enum NotificationStatus {
   SENT
   FAILED
   SKIPPED // no provider configured, or recipient has no contact for the channel
+  SENDING // claimed by a dispatcher; reset to QUEUED if it stays here too long
 }
 
 // Outbox: every notification is a row; a dispatcher delivers QUEUED rows via
@@ -429,11 +434,16 @@ model Notification {
   status        NotificationStatus @default(QUEUED)
   error         String?
   dedupeKey     String?            @unique
+  attempts      Int                @default(0)
+  nextAttemptAt DateTime? // retry not before this time (exponential backoff)
+  lockedAt      DateTime? // when a dispatcher claimed it (status SENDING)
   sentAt        DateTime?
   createdAt     DateTime           @default(now())
 
   @@index([status])
   @@index([createdAt])
+  @@index([status, nextAttemptAt]) // dispatcher: due QUEUED rows
+  @@index([orgId, createdAt]) // Messages page
 }
 
 // ---------- Multi-tenancy & billing (SaaS) ----------
