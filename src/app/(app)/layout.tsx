@@ -3,6 +3,7 @@ import { signOut } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AppNav, type NavGroup, type QuickItem } from "@/components/AppNav";
 import { PwaSetup } from "@/components/PwaSetup";
+import { LiveRefresh } from "@/components/LiveRefresh";
 import Link from "next/link";
 import { PLANS, isPlatformAdmin, orgStatus } from "@/lib/plans";
 type Item = { href: string; label: string; hint?: string; perm?: string };
@@ -173,6 +174,7 @@ export default async function AppLayout({
       {/* pb-28 on phones keeps the last content clear of the fixed bottom bar */}
       <main className="min-w-0 flex-1 px-4 py-6 pb-28 sm:px-6 sm:py-8 md:px-10 md:py-10 md:pb-10 print:p-0">
         <PwaSetup />
+        <LiveRefresh />
         {user.can("billing.manage") && (status.inTrial || overLimit || status.lapsed) && (
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-accent-light px-4 py-3 text-sm text-ink print:hidden">
             <p>
