@@ -247,6 +247,7 @@ model Lease {
 
   @@index([unitId])
   @@index([tenantId])
+  @@index([status])
 }
 
 // ---------- Rent collection (Phase 2) ----------
@@ -286,6 +287,8 @@ model Payment {
 
   @@index([leaseId])
   @@index([dueDate])
+  @@index([status, dueDate]) // late flags, reminders, arrears
+  @@index([status, paidDate]) // books and statements by month
 }
 
 // ---------- Owner payouts (Phase 3) ----------
@@ -396,6 +399,7 @@ model MaintenanceRequest {
 
   @@index([unitId])
   @@index([supplierId])
+  @@index([status])
 }
 
 // ---------- Notifications (Phase 5) ----------
@@ -438,6 +442,8 @@ model Notification {
 
   @@index([status])
   @@index([createdAt])
+  @@index([status, nextAttemptAt]) // dispatcher: due QUEUED rows
+  @@index([orgId, createdAt]) // Messages page
 }
 
 // ---------- Multi-tenancy & billing (SaaS) ----------

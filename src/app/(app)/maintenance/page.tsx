@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireUser, ownerScopeFilter } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
+import { Pager } from "@/components/Pager";
+import { pageArgs, pageNumber } from "@/lib/paging";
 
 const STATUS_STYLES: Record<string, string> = {
   OPEN: "bg-danger/10 text-danger",
@@ -18,20 +20,25 @@ const STATUS_LABEL: Record<string, string> = {
   CANCELLED: "Cancelled",
 };
 
-export default async function MaintenancePage() {
+export default async function MaintenancePage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const user = await requireUser();
+  const page = pageNumber((await searchParams).page);
   const isStaffLike = user.can("maintenance.manage");
 
   // Owners get a read-only view scoped to their own properties via
   // ownerScopeFilter below; everyone else with no matching scope sees an
   // empty list, same pattern as the other list pages in the app.
-  const requests = await prisma.maintenanceRequest.findMany({
-    where: { unit: { property: ownerScopeFilter(user) } },
-    include: { unit: { include: { property: true } }, supplier: true },
-    orderBy: { createdAt: "desc" },
-  });
-
-  const openCount = requests.filter((r) => r.status === "OPEN" || r.status === "ASSIGNED").length;
+  const where = { unit: { property: ownerScopeFilter(user) } };
+  const [requests, total, openCount] = await Promise.all([
+    prisma.maintenanceRequest.findMany({
+      where,
+      include: { unit: { include: { property: true } }, supplier: true },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      ...pageArgs(page),
+    }),
+    prisma.maintenanceRequest.count({ where }),
+    prisma.maintenanceRequest.count({ where: { ...where, status: { in: ["OPEN", "ASSIGNED"] } } }),
+  ]);
 
   return (
     <div>
@@ -39,7 +46,7 @@ export default async function MaintenancePage() {
         <div>
           <h1 className="font-serif text-3xl text-ink">Maintenance</h1>
           <p className="mt-1 text-sm text-muted">
-            {openCount} open · {requests.length} total
+            {openCount} open · {total} total
           </p>
         </div>
         {isStaffLike && (
@@ -91,6 +98,7 @@ export default async function MaintenancePage() {
           </table>
         </div>
       </div>
+      <Pager basePath="/maintenance" page={page} total={total} />
     </div>
   );
 }
