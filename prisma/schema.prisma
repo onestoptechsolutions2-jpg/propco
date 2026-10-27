@@ -411,6 +411,7 @@ enum NotificationStatus {
   SENT
   FAILED
   SKIPPED // no provider configured, or recipient has no contact for the channel
+  SENDING // claimed by a dispatcher; reset to QUEUED if it stays here too long
 }
 
 // Outbox: every notification is a row; a dispatcher delivers QUEUED rows via
@@ -429,6 +430,9 @@ model Notification {
   status        NotificationStatus @default(QUEUED)
   error         String?
   dedupeKey     String?            @unique
+  attempts      Int                @default(0)
+  nextAttemptAt DateTime? // retry not before this time (exponential backoff)
+  lockedAt      DateTime? // when a dispatcher claimed it (status SENDING)
   sentAt        DateTime?
   createdAt     DateTime           @default(now())
 

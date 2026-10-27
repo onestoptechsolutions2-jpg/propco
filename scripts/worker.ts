@@ -190,15 +190,36 @@ async function notifySubscriptionExpiry() {
   }
 }
 
+/**
+ * Run `fn` only if no other worker holds the Postgres advisory lock `key`.
+ * The lock lives on a transaction of its own (released automatically if this
+ * process dies) while `fn` uses normal connections. Returns false if skipped.
+ */
+async function withLock(key: number, fn: () => Promise<void>): Promise<boolean> {
+  return prisma.$transaction(
+    async (tx) => {
+      const [{ ok }] = await tx.$queryRaw<{ ok: boolean }[]>`SELECT pg_try_advisory_xact_lock(${key}) AS ok`;
+      if (!ok) return false;
+      await fn();
+      return true;
+    },
+    { timeout: 30 * 60_000, maxWait: 10_000 }
+  );
+}
+
+const DAILY_JOB_LOCK = 727401;
+
 async function runDailyJob(): Promise<boolean> {
   console.log(`[worker] daily job starting at ${new Date().toISOString()}`);
   try {
-    await generateMonthlyPayments();
-    await flagLatePayments();
-    await sendRentReminders();
-    await notifyExpiringLeases();
-    await notifySubscriptionExpiry();
-    console.log("[worker] daily job finished");
+    const ran = await withLock(DAILY_JOB_LOCK, async () => {
+      await generateMonthlyPayments();
+      await flagLatePayments();
+      await sendRentReminders();
+      await notifyExpiringLeases();
+      await notifySubscriptionExpiry();
+    });
+    console.log(ran ? "[worker] daily job finished" : "[worker] daily job already running elsewhere; skipped");
     return true;
   } catch (error) {
     console.error("[worker] daily job failed:", error);
@@ -230,7 +251,7 @@ cron.schedule("5 0 * * *", () => void runDailyJob());
 // Deliver queued notifications every minute.
 cron.schedule("* * * * *", () => {
   dispatchQueued(prisma).then(
-    (c) => c.sent + c.failed + c.skipped > 0 && console.log("[worker] notifications:", c),
+    (c) => c.sent + c.failed + c.skipped + c.retrying > 0 && console.log("[worker] notifications:", c),
     (e) => console.error("[worker] dispatch failed:", e)
   );
 });
