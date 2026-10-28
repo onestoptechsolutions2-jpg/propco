@@ -12,6 +12,8 @@ Add or remove staff by editing the variable and redeploying.
 
 ## The overview page
 
+![Admin overview](images/admin-overview.jpg)
+
 **Numbers**
 | Card | Meaning |
 |---|---|
@@ -36,9 +38,13 @@ The worker writes these check-ins to the `SystemHeartbeat` table (see [deploymen
 
 **Needs attention** lists, most urgent first: trials ending within 3 days, paid plans ending within 5 days, plans that lapsed in the last 14 days, and **paying customers nobody has signed in for 14 days** (the quiet ones who tend to leave). Each links to the customer.
 
+![Customer list](images/admin-customers.jpg)
+
 **Customer list** is searchable by company name, account number (the 8 characters on their Billing page) or any user's email, and filterable by status (trial, paying, lapsed, free, suspended). Shows plan, usage, last sign-in and join date, 50 per page.
 
 ## A customer's page
+
+![A customer's page](images/admin-customer.jpg)
 
 Everything support needs in one place:
 - **Snapshot:** properties, units, tenants, active leases; rent paid/late/due over 90 days; messages sent/failed/skipped over 7 days.
@@ -46,8 +52,12 @@ Everything support needs in one place:
 - **Online payments:** whether M-Pesa and card payments are switched on (never the keys), and recent payment attempts with the reason for any failure.
 - **People:** every user with role, last sign-in, and state (suspended, locked, wrong-password count, must change password), with support actions below.
 - **Message problems:** recent failed and skipped messages and why.
+![People, with support actions](images/admin-customer-people.jpg)
+
 - **Internal notes:** your private log for this customer (what they asked, what you said, what to follow up). Customers never see these.
 - **Recent activity:** the customer's own activity log, with support actions highlighted.
+
+![Recent activity, including support actions](images/admin-customer-activity.jpg)
 
 ## Common support jobs
 

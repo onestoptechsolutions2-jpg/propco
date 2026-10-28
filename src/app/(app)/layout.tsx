@@ -15,7 +15,7 @@ type Group = { title?: string; items: Item[] };
 const NAV: Group[] = [
   {
     items: [
-      { href: "/dashboard", label: "Home" },
+      { href: "/dashboard", label: "Today", hint: "What needs you" },
       { href: "/chat", label: "Chat", hint: "Just tell me what happened" },
       { href: "/insights", label: "Insights", hint: "How you are performing" },
       { href: "/guide", label: "Step-by-step guides", hint: "Not sure where to start?" },
@@ -35,6 +35,7 @@ const NAV: Group[] = [
     items: [
       { href: "/listings", label: "Vacancy pages", hint: "Fill empty units faster", perm: "listings.manage" },
       { href: "/stays", label: "Short stays", hint: "Homestay / BnB bookings", perm: "stays.manage" },
+      { href: "/agents", label: "Agents", hint: "Who brings tenants, what you owe", perm: "agents.manage" },
       { href: "/access", label: "Door codes", hint: "Smart lock and keypad codes", perm: "access.manage" },
     ],
   },
@@ -123,13 +124,13 @@ export default async function AppLayout({
   const quick: QuickItem[] =
     user.role === "OWNER"
       ? [
-          { href: "/dashboard", label: "Home", icon: "home" },
+          { href: "/dashboard", label: "Today", icon: "home" },
           { href: "/properties", label: "Properties", icon: "building" },
           { href: "/payouts", label: "Payouts", icon: "wallet" },
           { href: "/maintenance", label: "Repairs", icon: "wrench" },
         ]
       : [
-          { href: "/dashboard", label: "Home", icon: "home" },
+          { href: "/dashboard", label: "Today", icon: "home" },
           { href: "/chat", label: "Chat", icon: "chat" },
           ...(canRent ? [{ href: "/rent", label: "Rent", icon: "cash" as const, badge: proofsWaiting }] : []),
           ...(canMessages

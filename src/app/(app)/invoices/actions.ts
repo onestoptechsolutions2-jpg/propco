@@ -79,14 +79,24 @@ export async function createInvoice(formData: FormData) {
 }
 
 export async function approveInvoice(id: string) {
+  return approve(id, "/invoices");
+}
+
+/** The same approval, from the Today screen, returning there. */
+export async function approveInvoiceFromToday(id: string) {
+  return approve(id, "/dashboard");
+}
+
+async function approve(id: string, home: "/invoices" | "/dashboard") {
   const user = await requirePermission("invoices.manage");
+  const done = (q = ""): never => redirect(`${home}${q}`);
   const inv = await prisma.supplierInvoice.findFirst({ where: invoiceScope(user, id), include: { request: true } });
   if (!inv || inv.status !== "SUBMITTED") return;
 
   // Approval limit: big invoices need an admin (or the landlord themself).
   const org = await prisma.organization.findUniqueOrThrow({ where: { id: user.orgId } });
   if (org.approvalLimit && Number(inv.total) > Number(org.approvalLimit) && !user.can("invoices.approve_large")) {
-    back("?error=" + encodeURIComponent(`Invoices over KES ${Number(org.approvalLimit).toLocaleString()} need an admin to approve.`));
+    done("?error=" + encodeURIComponent(`Invoices over KES ${Number(org.approvalLimit).toLocaleString()} need an admin to approve.`));
   }
 
   await prisma.$transaction(async (tx) => {
@@ -99,7 +109,8 @@ export async function approveInvoice(id: string) {
   await audit(user, "invoice.approved", `KES ${Number(inv.total)} (${id})`);
   await notifyInvoice(id, "APPROVED");
   revalidatePath("/invoices");
-  back();
+  revalidatePath("/dashboard");
+  done();
 }
 
 export async function rejectInvoice(id: string, formData: FormData) {

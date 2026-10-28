@@ -43,6 +43,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
+# The worker (scripts/worker.ts, run with tsx) imports shared code from src/lib,
+# and tsx reads tsconfig.json for the "@/" path alias those files use.
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
 
 # Writable directory for the auto-generated AUTH_SECRET (see
 # docker-entrypoint.sh). Created and chowned here, before USER switches

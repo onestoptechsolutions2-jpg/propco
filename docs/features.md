@@ -1,6 +1,12 @@
-# Features guide
+# Features guide (quick reference)
 
-## Chat (home screen after login)
+A short summary of the newer features. For step-by-step instructions with screenshots, use the [user guide](user-guide/README.md); for what the product is and who it is for, see the [product overview](product/README.md).
+
+## Today (home screen after login)
+
+The first screen is a short, ordered list of what needs you now, most urgent first: late rent, M-Pesa proofs to match, supplier invoices to approve, payouts due, overdue repairs, leases ending, agent commissions due, WhatsApp messages waiting. Each card has the one action that clears it; supplier invoices can be approved right there. Each person only sees cards for things their permissions allow, so a clerk and an admin see different lists. Landlords with a login see a calm owner view of rent, vacancy and statements. The box at the bottom ("Tell PropCo what happened") sends what you type to Chat. The same data feeds the side panels: rent due and collected this month, who is late and for how long, vacancy, and what is coming up. The list is built in `src/lib/today.ts`; add a card by adding a block there gated by `user.can(...)`.
+
+## Chat
 
 Type what happened; PropCo works out what you mean and asks you to tap **Confirm**. Nothing is saved until you tap. It uses simple keyword matching, not AI, so wording matters a little: if it does not understand, it shows examples.
 
@@ -20,6 +26,14 @@ Each action checks the same permissions as the normal screens (`rent.manage`, `m
 ## Books
 
 A cash book that mixes what PropCo already knows (paid rent, paid supplier invoices, paid payroll, paid owner payouts) with entries you type (`paid 3500 airtime`, `received 25k deposit`). Shows money in, out and profit for the month, where the money went, and a CSV download for your accountant. Needs the `books.manage` permission (admins have it; give it to an accountant through *Team and roles*).
+
+### What you hold and owe
+
+At the top of Books, three tiles: **Held for owners** (landlord money you are keeping), **Owed to suppliers** (approved invoices not yet paid) and **Rent owed to you** (past-due, unpaid rent). *Held for owners* opens a per-owner table: rent collected on their agency-managed properties, less your commission, less completed repairs, less payouts already sent. It uses the same formula as monthly payouts, over all time, and has a CSV download. Needs `books.manage`.
+
+## Agents and commissions
+
+*Agents* (under Vacancies & stays) are people outside your team who bring tenants, such as leasing agents or referrers. They are not logins. Give each a commission: a percentage of the first month's rent (50 means half a month) or a fixed amount. When you create a lease from the tenant's page, choose how the tenant found you and, optionally, the agent. The commission amount is fixed on the lease at that moment, so changing an agent's rate later does not change past leases. It becomes **due when the tenant's first rent is paid** and shows on Today and on the Agents page; *Mark paid* records the method and reference and writes an "Agent commission" expense to Books. The Agents page also counts where tenants come from (agent, referral, vacancy page, walk-in, signboard) so you can see which marketing works. Needs `agents.manage` (admins have it; not given to staff by default).
 
 ## Insights
 
@@ -45,6 +59,7 @@ Email and SMS go through the outbox with automatic retries (see [deployment](dep
 |---|---|
 | `rent.manage` | Collect rent, confirm M-Pesa, request online payments |
 | `books.manage` | Books and the money charts in Insights (not given to staff by default) |
+| `agents.manage` | Agents, choosing an agent on a lease, paying commissions (not given to staff by default) |
 | `team.manage` | Team and roles, **Online payments** settings |
 | `billing.manage` | Plan and billing, paying for a plan online |
 

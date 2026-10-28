@@ -17,6 +17,7 @@ export const OUT_CATEGORIES = [
   "Supplier invoice",
   "Salaries",
   "Owner payout",
+  "Agent commission",
   "Utilities",
   "Cleaning",
   "Security",

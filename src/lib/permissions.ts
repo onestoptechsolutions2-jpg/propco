@@ -17,6 +17,7 @@ export const PERMISSION_GROUPS: { title: string; items: { key: string; label: st
       { key: "listings.manage", label: "Vacancy pages" },
       { key: "stays.manage", label: "Short stays (homestay / BnB)" },
       { key: "access.manage", label: "Door access codes" },
+      { key: "agents.manage", label: "Agents and their commissions", hint: "Sensitive" },
     ],
   },
   {
@@ -65,7 +66,7 @@ export const PERMISSION_LABEL: Record<string, string> = Object.fromEntries(
 );
 
 const STAFF_DEFAULT = ALL_PERMISSIONS.filter(
-  (p) => !["payroll.manage", "books.manage", "team.manage", "billing.manage"].includes(p)
+  (p) => !["payroll.manage", "books.manage", "agents.manage", "team.manage", "billing.manage"].includes(p)
 ).filter((p) => p !== "invoices.approve_large");
 
 const LANDLORD_DEFAULT = [
@@ -75,6 +76,7 @@ const LANDLORD_DEFAULT = [
   "listings.manage",
   "stays.manage",
   "access.manage",
+  "agents.manage",
   "rent.manage",
   "utilities.manage",
   "invoices.manage",

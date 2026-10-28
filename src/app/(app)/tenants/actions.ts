@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requirePermission, ownerScopeFilter } from "@/lib/access";
+import { commissionFor } from "@/lib/agents";
 import { orgHasPremium } from "@/lib/lease-access";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -73,6 +74,8 @@ const leaseSchema = z.object({
   startDate: z.string().min(1),
   rentAmount: z.coerce.number().nonnegative(),
   depositAmount: z.coerce.number().nonnegative().optional(),
+  source: z.enum(["AGENT", "REFERRAL", "VACANCY_PAGE", "WALK_IN", "SIGNBOARD", "OTHER"]).optional(),
+  agentId: z.string().optional(),
 });
 
 export async function createLease(formData: FormData) {
@@ -84,6 +87,8 @@ export async function createLease(formData: FormData) {
     startDate: formData.get("startDate"),
     rentAmount: formData.get("rentAmount"),
     depositAmount: formData.get("depositAmount") || undefined,
+    source: formData.get("source") || undefined,
+    agentId: formData.get("agentId") || undefined,
   });
 
   // Both the tenant and the unit must belong to the caller's company (and,
@@ -94,6 +99,19 @@ export async function createLease(formData: FormData) {
   ]);
   if (!tenant || !unit) throw new Error("You don't have permission to create this lease.");
 
+  // An agent can only be attached by someone allowed to manage agents. The
+  // commission is fixed now, from the agent's current terms.
+  let agentId: string | null = null;
+  let agentCommission: number | null = null;
+  let source = parsed.source ?? null;
+  if (parsed.agentId && user.can("agents.manage")) {
+    const agent = await prisma.agent.findFirst({ where: { id: parsed.agentId, orgId: user.orgId, active: true } });
+    if (!agent) throw new Error("That agent was not found.");
+    agentId = agent.id;
+    agentCommission = commissionFor(agent, parsed.rentAmount);
+    source = source ?? "AGENT";
+  }
+
   const [createdLease] = await prisma.$transaction([
     prisma.lease.create({
       data: {
@@ -102,6 +120,9 @@ export async function createLease(formData: FormData) {
         startDate: new Date(parsed.startDate),
         rentAmount: parsed.rentAmount,
         depositAmount: parsed.depositAmount,
+        source,
+        agentId,
+        agentCommission,
       },
     }),
     prisma.unit.update({ where: { id: parsed.unitId }, data: { status: "OCCUPIED" } }),

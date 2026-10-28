@@ -242,12 +242,22 @@ model Lease {
   readings   MeterReading[]
   checklists Checklist[]
 
+  // Where the tenant came from, and who earns a commission for it.
+  source                LeadSource?
+  agent                 Agent?      @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  agentId               String?
+  agentCommission       Decimal?    @db.Decimal(10, 2) // fixed when the lease starts, so later rate changes do not rewrite history
+  agentCommissionPaidAt DateTime?
+  agentCommissionMethod String?
+  agentCommissionRef    String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([unitId])
   @@index([tenantId])
   @@index([status])
+  @@index([agentId])
 }
 
 // ---------- Rent collection (Phase 2) ----------
@@ -490,6 +500,7 @@ model Organization {
   paymentSettings PaymentSettings?
   paymentIntents  PaymentIntent[]
   supportNotes    SupportNote[]
+  agents          Agent[]
   // Set by PropCo support: every user in the company is signed out and cannot sign in.
   suspendedAt     DateTime?
   suspendedReason String?
@@ -1102,4 +1113,45 @@ model SystemHeartbeat {
   name   String   @id // "worker", "daily-job", "payments-reconcile"
   seenAt DateTime
   info   String?
+}
+
+// ---------- Agents and commissions ----------
+
+enum AgentKind {
+  LEASING // finds and shows tenants for you
+  REFERRAL // refers a tenant, no other work
+}
+
+enum CommissionBasis {
+  PERCENT_OF_FIRST_RENT // rate is a percentage of the first month's rent (50 = half a month)
+  FLAT // rate is a fixed amount in KES per lease
+}
+
+enum LeadSource {
+  AGENT
+  REFERRAL
+  VACANCY_PAGE
+  WALK_IN
+  SIGNBOARD
+  OTHER
+}
+
+// A person outside the team who brings tenants and is paid a commission. Not a login.
+model Agent {
+  id        String          @id @default(cuid())
+  org       Organization    @relation(fields: [orgId], references: [id])
+  orgId     String
+  name      String
+  phone     String?
+  email     String?
+  kind      AgentKind       @default(LEASING)
+  basis     CommissionBasis @default(PERCENT_OF_FIRST_RENT)
+  rate      Decimal         @db.Decimal(10, 2)
+  mpesaNumber String?
+  notes     String?
+  active    Boolean         @default(true)
+  leases    Lease[]
+  createdAt DateTime        @default(now())
+
+  @@index([orgId])
 }

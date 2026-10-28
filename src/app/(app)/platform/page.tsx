@@ -17,7 +17,7 @@ const date = (d: Date | null) => (d ? d.toLocaleDateString("en-GB") : "—");
 const kes = (n: number) => `KES ${n.toLocaleString("en-US")}`;
 
 function Dot({ ok, warn }: { ok: boolean; warn?: boolean }) {
-  return <span className={`mr-2 inline-block h-2.5 w-2.5 rounded-full ${ok ? "bg-accent" : warn ? "bg-amber-500" : "bg-danger"}`} />;
+  return <span className={`mr-2 inline-block h-2.5 w-2.5 rounded-full ${ok ? "bg-green-600" : warn ? "bg-amber-500" : "bg-danger"}`} />;
 }
 
 export default async function PlatformPage({
