@@ -489,6 +489,10 @@ model Organization {
   chatMessages  ChatMessage[]
   paymentSettings PaymentSettings?
   paymentIntents  PaymentIntent[]
+  supportNotes    SupportNote[]
+  // Set by PropCo support: every user in the company is signed out and cannot sign in.
+  suspendedAt     DateTime?
+  suspendedReason String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1076,4 +1080,26 @@ model PaymentIntent {
   @@index([orgId, createdAt])
   @@index([status, createdAt])
   @@index([leaseId])
+}
+
+// ---------- Platform operations (PropCo staff only) ----------
+
+// Internal notes PropCo support keeps about a customer company. Never shown to the customer.
+model SupportNote {
+  id          String       @id @default(cuid())
+  org         Organization @relation(fields: [orgId], references: [id])
+  orgId       String
+  authorEmail String
+  body        String       @db.Text
+  createdAt   DateTime     @default(now())
+
+  @@index([orgId, createdAt])
+}
+
+// "Last seen" markers written by background processes, so the admin console can show
+// whether the worker is alive and when each job last succeeded.
+model SystemHeartbeat {
+  name   String   @id // "worker", "daily-job", "payments-reconcile"
+  seenAt DateTime
+  info   String?
 }

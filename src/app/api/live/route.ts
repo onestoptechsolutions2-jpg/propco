@@ -17,8 +17,8 @@ const MAX_LIFETIME_MS = 5 * 60_000;
 export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) return new Response("Unauthorized", { status: 401 });
-  const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { orgId: true, active: true } });
-  if (!me?.active || !me.orgId) return new Response("Forbidden", { status: 403 });
+  const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { orgId: true, active: true, org: { select: { suspendedAt: true } } } });
+  if (!me?.active || !me.orgId || me.org?.suspendedAt) return new Response("Forbidden", { status: 403 });
   const orgId = me.orgId;
 
   const encoder = new TextEncoder();

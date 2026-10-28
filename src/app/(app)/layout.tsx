@@ -114,7 +114,7 @@ export default async function AppLayout({
 
   const nav: Group[] = isPlatformAdmin(user.email)
     ? [
-        { title: "SaaS admin", items: [{ href: "/platform", label: "Client companies" }, { href: "/platform/partners", label: "Service partners" }] },
+        { title: "PropCo admin", items: [{ href: "/platform", label: "Customers & health" }, { href: "/platform/partners", label: "Service partners" }] },
         ...NAV,
       ]
     : NAV;

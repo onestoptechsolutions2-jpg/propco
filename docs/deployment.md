@@ -20,7 +20,7 @@ Copy `.env.example` to `.env`; it lists every variable with a comment. Summary:
 | `DATABASE_URL` | Always (already set in `docker-compose.yml`) |
 | `AUTH_SECRET` | Sessions. Generated and kept in a volume if empty |
 | `APP_URL` | The public address; used to build payment webhook URLs. If empty, falls back to `AUTH_URL`, then the request's host |
-| `PLATFORM_ADMIN_EMAILS` | Who may open the SaaS admin |
+| `PLATFORM_ADMIN_EMAILS` | Who may open the [PropCo admin console](admin-console.md) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google sign-in |
 | `RESEND_API_KEY`, `NOTIFY_EMAIL_FROM` | Email messages |
 | `AT_USERNAME`, `AT_API_KEY`, `AT_SENDER_ID` | SMS (Africa's Talking) |
@@ -56,7 +56,7 @@ Test a restore once before you need one. The volume lives on the same server as 
 - **Every minute:** sends queued email/SMS. A failed send is retried after 1, 2, 4 and 8 minutes and only then marked FAILED. WhatsApp messages stay queued for a person to tap *Send on WhatsApp*.
 - **Every 2 minutes:** asks M-Pesa/Flutterwave about unfinished online payments and completes or expires them.
 
-If the worker is down, the app keeps working; reminders and lost-callback recovery wait until it is back.
+The worker also records a check-in every minute (and after each daily run and payment check) in `SystemHeartbeat`; the admin console shows it as health. If the worker is down, the app keeps working; reminders and lost-callback recovery wait until it is back.
 
 ## Moving to a bigger setup later
 

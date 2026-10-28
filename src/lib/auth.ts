@@ -47,10 +47,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const password = credentials?.password as string | undefined;
         if (!email || !password) return null;
 
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await prisma.user.findUnique({ where: { email }, include: { org: { select: { suspendedAt: true } } } });
         if (!user?.passwordHash) return null;
         // Suspended people and locked accounts cannot sign in.
         if (!user.active) return null;
+        if (user.org?.suspendedAt) return null; // the whole company is suspended
         if (user.lockedUntil && user.lockedUntil > new Date()) return null;
 
         const valid = await bcrypt.compare(password, user.passwordHash);

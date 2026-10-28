@@ -16,6 +16,7 @@ const loadAccess = cache(async (userId: string) =>
       ownerId: true,
       orgId: true,
       orgRole: { select: { name: true, permissions: true } },
+      org: { select: { suspendedAt: true } },
     },
   })
 );
@@ -31,6 +32,8 @@ export async function requireUser(opts?: { allowPasswordChange?: boolean }) {
   if (!session?.user?.id) redirect("/login");
   const db = await loadAccess(session.user.id);
   if (!db || !db.active) redirect("/login?error=Suspended");
+  // PropCo support can suspend a whole company (for example for non-payment or abuse).
+  if (db.org?.suspendedAt) redirect("/login?error=Suspended");
   // Signed in (e.g. first Google login) but not yet attached to a company.
   if (!db.orgId) redirect("/onboarding");
   if (db.mustChangePassword && !opts?.allowPasswordChange) redirect("/account/password?required=1");
