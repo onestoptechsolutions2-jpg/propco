@@ -5,7 +5,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import * as ops from "../../src/lib/platform-ops";
-import { customerPage, statusWhere, systemHealth, STATUS_FILTERS } from "../../src/lib/platform";
+import { customerPage, systemHealth, STATUS_FILTERS } from "../../src/lib/platform";
 import { orgStatus } from "../../src/lib/plans";
 
 const APP = process.env.APP_URL_TEST || "http://localhost:3060";
