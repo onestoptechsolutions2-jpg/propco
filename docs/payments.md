@@ -14,6 +14,12 @@ Rent always goes to **the company's own** merchant account. PropCo never holds t
 
 Providers are configurable per company: switch either on or off in **Online payments** (menu, Account). A company can use one, both or neither.
 
+## What staff see
+
+On a lease, **Ask for payment** sends an M-Pesa prompt or creates a link; recent requests show their status.
+
+![Ask for payment on a lease](images/lease-payments.jpg)
+
 ## How a payment flows
 
 ```
@@ -37,6 +43,8 @@ Staff: "Request payment"            Tenant                    Provider
 6. **Backstop.** The worker checks unfinished intents every 2 minutes, so a lost webhook still completes. An M-Pesa prompt that is never answered is marked FAILED after 15 minutes; a Flutterwave link after 24 hours.
 
 Pages refresh themselves when the payment lands (see *Live updates* in the [features guide](features.md)).
+
+![Online payments settings](images/online-payments.jpg)
 
 ## Setting up M-Pesa (Daraja)
 

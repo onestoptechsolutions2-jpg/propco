@@ -1,4 +1,6 @@
-# Features guide
+# Features guide (quick reference)
+
+A short summary of the newer features. For step-by-step instructions with screenshots, use the [user guide](user-guide/README.md); for what the product is and who it is for, see the [product overview](product/README.md).
 
 ## Today (home screen after login)
 
