@@ -5,14 +5,11 @@
 Properties, Units, Owners and Tenants, including a basic lease-assignment
 flow.
 
-**Phase 2** (done, except live M-Pesa): manual rent collection — a rent roll (`/rent`)
-showing every active lease's payment status for the current month, a
-per-lease payment history, and a form to record payments (M-Pesa, bank,
-cash, or card) with a reference number. **Not yet wired up:** live M-Pesa
-STK Push — recording an M-Pesa payment today is a manual entry (e.g. after
-checking your phone/statement), not an automatic charge. Building that
-requires your actual Safaricom Daraja API credentials (sandbox or
-production) — see "What's next" below.
+**Phase 2** (done): rent collection — a rent roll (`/rent`) showing every active
+lease's payment status for the current month, a per-lease payment history, and a
+form to record payments (M-Pesa, bank, cash, or card) with a reference number.
+Tenants can also pay online (M-Pesa STK Push and Flutterwave), configured per
+company; see [online payments](docs/payments.md).
 
 **Phase 3** (done): owner payouts (`/payouts`). Pick a month and generate one
 payout per owner from that month's rent marked *Paid* on their
@@ -40,8 +37,9 @@ received (owner), payout sent (owner), rent late (tenant), lease expiring in
 (owner + tenant), supplier paid — are queued in a `Notification` table and
 delivered by the worker every minute via each recipient's preferred channel
 (set on their edit page). Email uses Resend and SMS uses Africa's Talking
-(see `.env.example`); WhatsApp isn't wired up. With no keys, messages show as
-*Skipped* on `/notifications`.
+(see `.env.example`); WhatsApp messages are sent from a person's own phone with a
+tap-to-send link. Failed sends are retried with backoff. With no keys, messages show
+as *Skipped* on `/notifications`.
 
 **Usability pass:** the app is an installable PWA (manifest, service worker,
 "Install app" banner; Android/desktop Chrome and iOS "Add to Home Screen"),
@@ -75,12 +73,12 @@ the move-in inventory, prices damage, adds unpaid utilities and rent, settles
 the deposit, ends the lease, frees the unit (or opens a repair request), and
 prints a clearance certificate. New leases open straight into onboarding.
 
-**M-Pesa is manual by design (proof of payment):** tenants pay the agency's
+**Proof of payment (pasted M-Pesa messages) still works alongside online payments:** tenants pay the agency's
 till/paybill and forward the confirmation SMS. Staff paste it into
 `/rent/confirm`; the code, amount and payer are read automatically, matched to a
 tenant by phone, and become a Paid rent payment on approval. A code can never be
 used twice. Subscription customers do the same on `/billing`; you activate their
-plan from `/platform`. No Daraja credentials are needed.
+plan from `/platform`. No Daraja credentials are needed for this flow.
 
 **Receipts and invoices:** every paid rent row has a printable *Receipt*; each
 lease has an *Invoice / statement* of unpaid rent and utility bills with the
@@ -132,7 +130,14 @@ scheduled/exported reports. Everything above builds on the same foundation.
 
 ## Documentation
 
-See [`docs/`](docs/README.md): [online payments](docs/payments.md), the [features guide](docs/features.md), and [deployment and operations](docs/deployment.md) (environment variables, backups, the worker). `.env.example` lists every setting.
+Everything is in [`docs/`](docs/README.md):
+
+- **[User guide](docs/user-guide/README.md)**: step-by-step manuals with screenshots
+- **[Product overview](docs/product/README.md)**: what PropCo is, who it is for, plans, limits
+- **[Developer guide](docs/developer/README.md)**: setup, architecture, data model, permissions, jobs, testing, contributing
+- [Online payments](docs/payments.md), [admin console](docs/admin-console.md), [deployment and operations](docs/deployment.md)
+
+`.env.example` lists every setting.
 
 ## Stack
 
@@ -228,16 +233,7 @@ the platform spec doc).
 
 ## What's next
 
-- **Live M-Pesa STK Push**: needs your Safaricom Daraja API consumer
-  key/secret and shortcode (sandbox or production). Once you have those,
-  the natural next step is a `/api/mpesa/stk-push` route that initiates a
-  push to the tenant's phone, plus a webhook route
-  (`/api/mpesa/callback`) that Safaricom calls back with the result —
-  which would then create/update a `Payment` row automatically instead of
-  a staff member entering it by hand.
-- After that: invoicing, payroll, documents & contracts, reporting, and
-  analytics — see `property-management-platform-spec.md` for the full
-  module list and build-phase order.
+See "Known limits and what is next" in the [product overview](docs/product/README.md#known-limits-and-what-is-next). In short: a tenant portal, a "forgot password" email link, Daraja C2B so paybill payments record themselves, document storage and report exports. The original module list is in `property-management-platform-spec.md`.
 
 ## Known limitation in this sandbox
 
