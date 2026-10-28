@@ -72,6 +72,7 @@ const NAV: Group[] = [
     title: "Account",
     items: [
       { href: "/payroll", label: "Payroll", hint: "Salaries and payslips", perm: "payroll.manage" },
+      { href: "/settings/payments", label: "Online payments", hint: "M-Pesa and card keys", perm: "team.manage" },
       { href: "/team", label: "Team & roles", hint: "People, access and activity", perm: "team.manage" },
       { href: "/billing", label: "Plan & billing", perm: "billing.manage" },
       { href: "/account", label: "My account", hint: "Password and sign-in" },
@@ -113,7 +114,7 @@ export default async function AppLayout({
 
   const nav: Group[] = isPlatformAdmin(user.email)
     ? [
-        { title: "SaaS admin", items: [{ href: "/platform", label: "Client companies" }, { href: "/platform/partners", label: "Service partners" }] },
+        { title: "PropCo admin", items: [{ href: "/platform", label: "Customers & health" }, { href: "/platform/partners", label: "Service partners" }] },
         ...NAV,
       ]
     : NAV;

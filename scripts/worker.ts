@@ -9,6 +9,8 @@
 import { PrismaClient } from "@prisma/client";
 import cron from "node-cron";
 import { notify, dispatchQueued } from "../src/lib/notify";
+import { reconcilePending } from "../src/lib/payments/reconcile";
+import { beat } from "../src/lib/heartbeat";
 
 const prisma = new PrismaClient();
 
@@ -224,6 +226,7 @@ async function runDailyJob(): Promise<boolean> {
       await notifySubscriptionExpiry();
     });
     console.log(ran ? "[worker] daily job finished" : "[worker] daily job already running elsewhere; skipped");
+    if (ran) await beat(prisma, "daily-job");
     return true;
   } catch (error) {
     console.error("[worker] daily job failed:", error);
@@ -254,12 +257,35 @@ void runOnBootWithRetry();
 cron.schedule("5 0 * * *", () => void runDailyJob());
 // Deliver queued notifications every minute.
 cron.schedule("* * * * *", () => {
+  void beat(prisma, "worker");
   dispatchQueued(prisma).then(
     (c) => c.sent + c.failed + c.skipped + c.retrying > 0 && console.log("[worker] notifications:", c),
     (e) => console.error("[worker] dispatch failed:", e)
   );
 });
 
+// Catch payment callbacks that never arrived: ask the provider about unfinished online payments.
+let reconciling = false;
+cron.schedule("*/2 * * * *", async () => {
+  if (reconciling) return;
+  reconciling = true;
+  try {
+    const done = await reconcilePending(prisma);
+    await beat(prisma, "payments-reconcile");
+    if (done.length > 0) console.log(`[worker] reconciled ${done.length} online payment(s)`);
+    for (const d of done) {
+      if (!d.paymentId) continue;
+      const { notifyPaymentReceived } = await import("../src/lib/notify-events");
+      await notifyPaymentReceived(d.paymentId);
+    }
+  } catch (e) {
+    console.error("[worker] payment reconcile failed:", e);
+  } finally {
+    reconciling = false;
+  }
+});
+
+void beat(prisma, "worker", "started");
 console.log("[worker] started — daily rent job scheduled for 00:05");
 
 async function shutdown() {

@@ -487,6 +487,12 @@ model Organization {
   payrollRuns   PayrollRun[]
   ledgerEntries LedgerEntry[]
   chatMessages  ChatMessage[]
+  paymentSettings PaymentSettings?
+  paymentIntents  PaymentIntent[]
+  supportNotes    SupportNote[]
+  // Set by PropCo support: every user in the company is signed out and cannot sign in.
+  suspendedAt     DateTime?
+  suspendedReason String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -998,4 +1004,102 @@ model ChatMessage {
   createdAt DateTime @default(now())
 
   @@index([orgId, userId, createdAt])
+}
+
+// ---------- Online payments ----------
+
+enum IntentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+enum IntentPurpose {
+  RENT // a tenant paying rent into the company's own M-Pesa / card account
+  SUBSCRIPTION // a company paying for its PropCo plan, into PropCo's account
+}
+
+// A company's own payment-provider credentials. Secrets are encrypted at rest
+// (see src/lib/payments/crypto.ts). callbackToken is the unguessable part of the
+// webhook URLs the providers call; Daraja does not sign its callbacks.
+model PaymentSettings {
+  id            String       @id @default(cuid())
+  org           Organization @relation(fields: [orgId], references: [id])
+  orgId         String       @unique
+  callbackToken String       @unique
+
+  mpesaEnabled           Boolean @default(false)
+  mpesaEnv               String  @default("sandbox") // "sandbox" | "production"
+  mpesaKind              String  @default("PAYBILL") // "PAYBILL" | "TILL"
+  mpesaShortcode         String? // the paybill / store number used to sign the request
+  mpesaPartyB            String? // the till number for TILL; defaults to the shortcode
+  mpesaConsumerKeyEnc    String?
+  mpesaConsumerSecretEnc String?
+  mpesaPasskeyEnc        String?
+
+  flutterwaveEnabled      Boolean @default(false)
+  flutterwaveSecretKeyEnc String?
+  flutterwaveHashEnc      String? // the "secret hash" configured on the webhook
+
+  updatedAt DateTime @updatedAt
+}
+
+// One attempt to collect money. Created before the provider is called, completed
+// exactly once (PENDING -> SUCCESS/FAILED) by src/lib/payments/reconcile.ts, whether
+// the news arrives by webhook, by the worker's status check, or both.
+model PaymentIntent {
+  id       String        @id @default(cuid())
+  org      Organization  @relation(fields: [orgId], references: [id])
+  orgId    String
+  purpose  IntentPurpose
+  provider String // "MPESA" | "FLUTTERWAVE"
+  status   IntentStatus  @default(PENDING)
+
+  amount        Decimal @db.Decimal(12, 2)
+  currency      String  @default("KES")
+  phone         String?
+  providerRef   String? // M-Pesa CheckoutRequestID, or our tx_ref for Flutterwave
+  receipt       String? // M-Pesa receipt number / Flutterwave flw_ref
+  paidAmount    Decimal? @db.Decimal(12, 2)
+  failureReason String?
+  checkoutUrl   String?
+
+  // What it pays for
+  leaseId   String?
+  paymentId String?
+  plan      Plan?
+  months    Int?
+
+  createdById String?
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([provider, providerRef])
+  @@index([orgId, createdAt])
+  @@index([status, createdAt])
+  @@index([leaseId])
+}
+
+// ---------- Platform operations (PropCo staff only) ----------
+
+// Internal notes PropCo support keeps about a customer company. Never shown to the customer.
+model SupportNote {
+  id          String       @id @default(cuid())
+  org         Organization @relation(fields: [orgId], references: [id])
+  orgId       String
+  authorEmail String
+  body        String       @db.Text
+  createdAt   DateTime     @default(now())
+
+  @@index([orgId, createdAt])
+}
+
+// "Last seen" markers written by background processes, so the admin console can show
+// whether the worker is alive and when each job last succeeded.
+model SystemHeartbeat {
+  name   String   @id // "worker", "daily-job", "payments-reconcile"
+  seenAt DateTime
+  info   String?
 }

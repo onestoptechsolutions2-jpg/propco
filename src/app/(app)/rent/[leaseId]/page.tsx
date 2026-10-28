@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireUser, canManageOwnerRecords } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { recordPayment, markPaymentPaid } from "../actions";
+import { OnlinePayments } from "./OnlinePayments";
 
 const STATUS_STYLES: Record<string, string> = {
   PAID: "bg-accent-light text-accent",
@@ -12,10 +13,13 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default async function LeasePaymentsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ leaseId: string }>;
+  searchParams: Promise<{ requested?: string; payError?: string }>;
 }) {
   const { leaseId } = await params;
+  const notice = await searchParams;
   const user = await requireUser();
 
   const lease = await prisma.lease.findUnique({
@@ -123,7 +127,15 @@ export default async function LeasePaymentsPage({
 
         {canRecord && (
           <div>
-            <h2 className="font-serif text-lg text-ink">Record a payment</h2>
+            {user.can("rent.manage") && (
+              <OnlinePayments
+                lease={lease}
+                orgId={user.orgId}
+                defaultAmount={Number(lease.payments.find((p) => p.status === "PENDING" || p.status === "LATE")?.amount ?? lease.rentAmount)}
+                notice={notice}
+              />
+            )}
+            <h2 className="mt-8 font-serif text-lg text-ink">Record a payment</h2>
             <form action={recordPaymentForLease} className="mt-4 flex flex-col gap-4">
               <div>
                 <label className="mb-1 block text-xs font-medium text-muted">Amount (KES)</label>
