@@ -1,15 +1,9 @@
 import type { Plan } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
-export const TRIAL_DAYS = 14;
+import { PLANS, TRIAL_DAYS } from "./plan-catalog";
 
-// Prices in KES per month. Edit here to change pricing everywhere.
-export const PLANS: Record<Plan, { label: string; maxUnits: number; priceKes: number; blurb: string }> = {
-  FREE: { label: "Free", maxUnits: 5, priceKes: 0, blurb: "Up to 5 units" },
-  GROWTH: { label: "Growth", maxUnits: 50, priceKes: 2500, blurb: "Up to 50 units" },
-  PRO: { label: "Pro", maxUnits: 250, priceKes: 7500, blurb: "Up to 250 units" },
-  SCALE: { label: "Scale", maxUnits: Infinity, priceKes: 15000, blurb: "Unlimited units" },
-};
+export { PLANS, TRIAL_DAYS };
 
 type OrgBilling = { plan: Plan; trialEndsAt: Date; paidUntil: Date | null };
 

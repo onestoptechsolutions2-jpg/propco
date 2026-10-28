@@ -130,6 +130,10 @@ Not built yet: a document/contract store (leases, agreements, e-signature) and
 scheduled/exported reports. Everything above builds on the same foundation.
 
 
+## Documentation
+
+See [`docs/`](docs/README.md): [online payments](docs/payments.md), the [features guide](docs/features.md), and [deployment and operations](docs/deployment.md) (environment variables, backups, the worker). `.env.example` lists every setting.
+
 ## Stack
 
 - Next.js 16 (App Router, TypeScript), Tailwind CSS v4

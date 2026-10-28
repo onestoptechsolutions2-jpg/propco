@@ -9,6 +9,7 @@
 import { PrismaClient } from "@prisma/client";
 import cron from "node-cron";
 import { notify, dispatchQueued } from "../src/lib/notify";
+import { reconcilePending } from "../src/lib/payments/reconcile";
 
 const prisma = new PrismaClient();
 
@@ -258,6 +259,26 @@ cron.schedule("* * * * *", () => {
     (c) => c.sent + c.failed + c.skipped + c.retrying > 0 && console.log("[worker] notifications:", c),
     (e) => console.error("[worker] dispatch failed:", e)
   );
+});
+
+// Catch payment callbacks that never arrived: ask the provider about unfinished online payments.
+let reconciling = false;
+cron.schedule("*/2 * * * *", async () => {
+  if (reconciling) return;
+  reconciling = true;
+  try {
+    const done = await reconcilePending(prisma);
+    if (done.length > 0) console.log(`[worker] reconciled ${done.length} online payment(s)`);
+    for (const d of done) {
+      if (!d.paymentId) continue;
+      const { notifyPaymentReceived } = await import("../src/lib/notify-events");
+      await notifyPaymentReceived(d.paymentId);
+    }
+  } catch (e) {
+    console.error("[worker] payment reconcile failed:", e);
+  } finally {
+    reconciling = false;
+  }
 });
 
 console.log("[worker] started — daily rent job scheduled for 00:05");
