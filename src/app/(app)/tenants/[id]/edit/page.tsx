@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requirePermission, ownerScopeFilter } from "@/lib/access";
 import { tenantReliability } from "@/lib/reliability";
 import { prisma } from "@/lib/prisma";
+import { SOURCE_LABELS } from "@/lib/agents";
 import { updateTenant, deleteTenant, createLease } from "../../actions";
 
 export default async function EditTenantPage({
@@ -13,7 +14,7 @@ export default async function EditTenantPage({
   const { id } = await params;
   const user = await requirePermission("tenants.manage");
 
-  const [tenant, vacantUnits] = await Promise.all([
+  const [tenant, vacantUnits, agents] = await Promise.all([
     prisma.tenant.findFirst({
       where: { id, orgId: user.orgId },
       include: { leases: { where: { status: "ACTIVE" }, include: { unit: { include: { property: true } } } } },
@@ -23,6 +24,9 @@ export default async function EditTenantPage({
       include: { property: true },
       orderBy: { property: { name: "asc" } },
     }),
+    user.can("agents.manage")
+      ? prisma.agent.findMany({ where: { orgId: user.orgId, active: true }, orderBy: { name: "asc" } })
+      : Promise.resolve([]),
   ]);
 
   if (!tenant) notFound();
@@ -146,6 +150,26 @@ export default async function EditTenantPage({
                   className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink"
                 />
               </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">How did they find you?</label>
+                <select name="source" className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink">
+                  <option value="">Not recorded</option>
+                  {Object.entries(SOURCE_LABELS).map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </select>
+              </div>
+              {agents.length > 0 && (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">Agent (earns a commission)</label>
+                  <select name="agentId" className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-ink">
+                    <option value="">No agent</option>
+                    {agents.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <button
                 type="submit"
                 className="self-start rounded bg-ink px-5 py-2.5 text-sm font-medium text-white transition hover:bg-ink-light"

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requirePermission } from "@/lib/access";
 import { loadBook } from "@/lib/books";
+import { holdAndOwe } from "@/lib/owner-money";
 import { addQuickEntry, deleteEntry } from "./actions";
 
 const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
@@ -31,7 +32,7 @@ export default async function BooksPage({
   const user = await requirePermission("books.manage");
   const { m, error } = await searchParams;
   const range = monthRange(m);
-  const lines = await loadBook(user.orgId, range.from, range.to);
+  const [lines, owe] = await Promise.all([loadBook(user.orgId, range.from, range.to), holdAndOwe(user.orgId)]);
 
   const moneyIn = lines.filter((l) => l.kind === "IN").reduce((s, l) => s + l.amount, 0);
   const moneyOut = lines.filter((l) => l.kind === "OUT").reduce((s, l) => s + l.amount, 0);
@@ -75,6 +76,21 @@ export default async function BooksPage({
           <p className="text-xs text-muted">{moneyIn - moneyOut >= 0 ? "Profit" : "Loss"}</p>
           <p className={`font-medium ${moneyIn - moneyOut >= 0 ? "text-ink" : "text-danger"}`}>{fmt(Math.abs(moneyIn - moneyOut))}</p>
         </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+        <Link href="/books/owners" className="rounded border border-border p-3 hover:bg-background">
+          <p className="text-xs text-muted">Held for owners</p>
+          <p className="font-medium text-ink">{fmt(owe.heldForOwners)}</p>
+        </Link>
+        <Link href="/invoices" className="rounded border border-border p-3 hover:bg-background">
+          <p className="text-xs text-muted">Owed to suppliers</p>
+          <p className="font-medium text-ink">{fmt(owe.owedToSuppliers)}</p>
+        </Link>
+        <Link href="/rent" className="rounded border border-border p-3 hover:bg-background">
+          <p className="text-xs text-muted">Rent owed to you</p>
+          <p className="font-medium text-ink">{fmt(owe.rentOwedToYou)}</p>
+        </Link>
       </div>
 
       {byCategory.size > 0 && (

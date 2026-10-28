@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { ownerScopeFilter, type AccessUser } from "@/lib/access";
 import { ageBuckets, type AgeBuckets } from "@/lib/analytics";
 import { orgStatus } from "@/lib/plans";
+import { commissionsDue } from "@/lib/agents";
 import { whatsappLink } from "@/lib/whatsapp";
 
 const DAY = 86_400_000;
@@ -185,6 +186,17 @@ export async function buildFeed(user: AccessUser, now = new Date()): Promise<Fee
         if (overdue.length) {
           items.push({ id: "preventive", tone: "warn", icon: "tool", priority: 46, title: `${overdue.length} preventive job${overdue.length === 1 ? " is" : "s are"} overdue`, detail: names(overdue.map((s) => s.title)), actions: [{ kind: "link", label: "Open the calendar", href: "/maintenance/schedule", primary: true }] });
         }
+      })()
+    );
+  }
+
+  if (can("agents.manage")) {
+    jobs.push(
+      (async () => {
+        const due = await commissionsDue(user.orgId);
+        if (!due.length) return;
+        const total = due.reduce((n, l) => n + Number(l.agentCommission ?? 0), 0);
+        items.push({ id: "commissions", tone: "info", icon: "wallet", priority: 53, title: `${fmt(total)} in agent commission is due`, detail: names(due.slice(0, 3).map((l) => `${l.agent!.name} (${l.tenant.name})`)), actions: [{ kind: "link", label: "Pay agents", href: "/agents", primary: true }] });
       })()
     );
   }

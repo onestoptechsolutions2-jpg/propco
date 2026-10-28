@@ -35,6 +35,7 @@ const NAV: Group[] = [
     items: [
       { href: "/listings", label: "Vacancy pages", hint: "Fill empty units faster", perm: "listings.manage" },
       { href: "/stays", label: "Short stays", hint: "Homestay / BnB bookings", perm: "stays.manage" },
+      { href: "/agents", label: "Agents", hint: "Who brings tenants, what you owe", perm: "agents.manage" },
       { href: "/access", label: "Door codes", hint: "Smart lock and keypad codes", perm: "access.manage" },
     ],
   },
