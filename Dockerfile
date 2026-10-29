@@ -70,5 +70,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
+# Docker sets HOSTNAME to the container id, and the standalone server binds to it,
+# which makes http://localhost:3000 (the compose healthcheck) refuse connections.
+ENV HOSTNAME=0.0.0.0
 ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["node", "server.js"]
